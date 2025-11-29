@@ -1,0 +1,55 @@
+# =========================
+# Flutter / Dart
+# =========================
+.dart_tool/
+.packages
+.buildlog
+pubspec.lock
+build/
+ios/Pods/
+android/.gradle/
+android/app/debug/
+android/app/profile/
+android/app/release/
+.flutter-plugins
+.flutter-plugins-dependencies
+.flutter-idea/
+.macos/
+linux/
+windows/
+web/
+test/
+coverage/
+
+# Generated files
+**/GeneratedPluginRegistrant.*
+
+# =========================
+# Node.js / Backend
+# =========================
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+dist/
+build/
+.env
+.env.*
+logs/
+*.log
+
+# =========================
+# General
+# =========================
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# Cache
+.cache/
+tmp/
+temp/
