@@ -12,7 +12,8 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
   VoidCallback? onTap,
   bool isGroup = true,
   double? customProfit,
-  double? customProfitPercent
+  double? customProfitPercent,
+  int? trackedCount, // 🔥 New parameter
 }) {
   double? profitLoss;
   double? profitPercent;
@@ -26,6 +27,18 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
     profitLoss = item.price! - item.purchasePrice!;
     profitPercent = (profitLoss / item.purchasePrice!) * 100;
     profitColor = profitLoss >= 0 ? Colors.green : Colors.red;
+  }
+
+  // Helper to format profit text
+  String getProfitText() {
+    if (profitLoss == null || profitPercent == null) return "";
+    String text = "${profitLoss! >= 0 ? '+' : ''}\$${profitLoss!.toStringAsFixed(2)} (${profitPercent!.toStringAsFixed(0)}%)";
+    
+    // If this is a group and we have partial tracking info
+    if (isGroup && count > 1 && trackedCount != null && trackedCount! < count) {
+      text += " [$trackedCount/$count]";
+    }
+    return text;
   }
 
   return Container(
@@ -85,7 +98,7 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
                         ),
                         if (profitLoss != null)
                           Text(
-                            "${profitLoss >= 0 ? '+' : ''}\$${profitLoss.toStringAsFixed(2)} (${profitPercent!.toStringAsFixed(0)}%)",
+                            getProfitText(),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: profitColor,
@@ -124,15 +137,7 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
                             if (profitLoss != null) ...[
                               const SizedBox(width: 8),
                               Text(
-                                "${profitLoss >= 0 ? '+' : ''}\$${profitLoss.toStringAsFixed(2)}",
-                                style: TextStyle(
-                                  color: profitColor,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Text(
-                                "(${profitPercent!.toStringAsFixed(1)}%)",
+                                getProfitText(),
                                 style: TextStyle(
                                   color: profitColor,
                                   fontSize: 12,
@@ -175,6 +180,13 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
 
 
 
+enum SortOption {
+  valueHighToLow,
+  priceHighToLow,
+  countHighToLow,
+  nameAZ,
+}
+
 class InventoryPage extends StatefulWidget {
   const InventoryPage({super.key});
 
@@ -187,6 +199,7 @@ class _InventoryPageState extends State<InventoryPage> {
   Map<String, List<InventoryItem>> groupedItems = {};
   bool loading = true;
   bool isGrid = false;
+  SortOption currentSort = SortOption.valueHighToLow; // Default sort
 
   @override
   void initState() {
@@ -214,6 +227,40 @@ class _InventoryPageState extends State<InventoryPage> {
         loading = false;
       });
     }
+  }
+
+  List<String> getSortedKeys() {
+    final keys = groupedItems.keys.toList();
+
+    keys.sort((a, b) {
+      final groupA = groupedItems[a]!;
+      final groupB = groupedItems[b]!;
+      
+      final itemA = groupA.first;
+      final itemB = groupB.first;
+
+      final priceA = itemA.price ?? 0;
+      final priceB = itemB.price ?? 0;
+      
+      final countA = groupA.length;
+      final countB = groupB.length;
+
+      final valueA = priceA * countA;
+      final valueB = priceB * countB;
+
+      switch (currentSort) {
+        case SortOption.valueHighToLow:
+          return valueB.compareTo(valueA);
+        case SortOption.priceHighToLow:
+          return priceB.compareTo(priceA);
+        case SortOption.countHighToLow:
+          return countB.compareTo(countA);
+        case SortOption.nameAZ:
+          return a.compareTo(b);
+      }
+    });
+
+    return keys;
   }
 
   void _showGroupDetails(BuildContext context, String name, List<InventoryItem> groupItems) {
@@ -262,12 +309,40 @@ class _InventoryPageState extends State<InventoryPage> {
 
   @override
   Widget build(BuildContext context) {
-    final groupKeys = groupedItems.keys.toList();
+    final groupKeys = getSortedKeys(); // 🔥 Use sorted keys
 
     return Scaffold(
       appBar: AppBar(
         title: const Text("Inventory"),
         actions: [
+          // Sort Button
+          PopupMenuButton<SortOption>(
+            icon: const Icon(Icons.sort),
+            tooltip: "Sort Items",
+            onSelected: (SortOption result) {
+              setState(() {
+                currentSort = result;
+              });
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
+              const PopupMenuItem<SortOption>(
+                value: SortOption.valueHighToLow,
+                child: Text('Total Value (High -> Low)'),
+              ),
+              const PopupMenuItem<SortOption>(
+                value: SortOption.priceHighToLow,
+                child: Text('Unit Price (High -> Low)'),
+              ),
+              const PopupMenuItem<SortOption>(
+                value: SortOption.countHighToLow,
+                child: Text('Count (High -> Low)'),
+              ),
+              const PopupMenuItem<SortOption>(
+                value: SortOption.nameAZ,
+                child: Text('Name (A -> Z)'),
+              ),
+            ],
+          ),
           IconButton(
             icon: Icon(isGrid ? Icons.view_list : Icons.grid_view),
             onPressed: () {
@@ -297,15 +372,30 @@ class _InventoryPageState extends State<InventoryPage> {
               // Calculate summary stats
               double totalCurrentPrice = 0;
               double totalTrackedProfit = 0;
-              double totalTrackedCost = 0;
-              bool hasAnyTracked = false;
+              int trackedCount = 0;
 
               for (var item in group) {
-                  if (item.price != null) totalCurrentPrice += item.price!;
+                  if (item.price != null) {
+                    totalCurrentPrice += item.price!;
+                  }
                   if (item.price != null && item.purchasePrice != null) {
                       totalTrackedProfit += (item.price! - item.purchasePrice!);
-                      totalTrackedCost += item.purchasePrice!;
-                      hasAnyTracked = true;
+                      trackedCount++;
+                  }
+              }
+              
+              // Logic: Diluted ROI
+              // Assume untracked items are break-even (Cost = Price)
+              // Implied Cost = Total Value - Tracked Profit
+              double? calculatedProfit;
+              double? calculatedPercent;
+
+              if (totalCurrentPrice > 0 && trackedCount > 0) {
+                  calculatedProfit = totalTrackedProfit;
+                  
+                  double impliedCost = totalCurrentPrice - totalTrackedProfit;
+                  if (impliedCost > 0) {
+                    calculatedPercent = (totalTrackedProfit / impliedCost) * 100;
                   }
               }
               
@@ -317,13 +407,8 @@ class _InventoryPageState extends State<InventoryPage> {
                   type: group.first.type,
                   marketable: group.first.marketable,
                   price: totalCurrentPrice > 0 ? totalCurrentPrice : null,
-                  purchasePrice: null, // Not used for profit calc
+                  purchasePrice: null, 
               );
-              
-              double? calculatedProfit = hasAnyTracked ? totalTrackedProfit : null;
-              double? calculatedPercent = (hasAnyTracked && totalTrackedCost > 0) 
-                  ? (totalTrackedProfit / totalTrackedCost * 100) 
-                  : null;
 
               return buildItemCard(
                 context, 
@@ -332,6 +417,7 @@ class _InventoryPageState extends State<InventoryPage> {
                 count: group.length, 
                 customProfit: calculatedProfit,
                 customProfitPercent: calculatedPercent,
+                trackedCount: trackedCount, // 🔥 Pass tracked count
                 onTap: () {
                   if (group.length > 1) {
                     _showGroupDetails(context, key, group);
@@ -354,15 +440,30 @@ class _InventoryPageState extends State<InventoryPage> {
               // Calculate summary stats
               double totalCurrentPrice = 0;
               double totalTrackedProfit = 0;
-              double totalTrackedCost = 0;
-              bool hasAnyTracked = false;
+              int trackedCount = 0;
 
               for (var item in group) {
-                  if (item.price != null) totalCurrentPrice += item.price!;
+                  if (item.price != null) {
+                    totalCurrentPrice += item.price!;
+                  }
                   if (item.price != null && item.purchasePrice != null) {
                       totalTrackedProfit += (item.price! - item.purchasePrice!);
-                      totalTrackedCost += item.purchasePrice!;
-                      hasAnyTracked = true;
+                      trackedCount++;
+                  }
+              }
+              
+              // Logic: Diluted ROI
+              // Assume untracked items are break-even (Cost = Price)
+              // Implied Cost = Total Value - Tracked Profit
+              double? calculatedProfit;
+              double? calculatedPercent;
+
+              if (totalCurrentPrice > 0 && trackedCount > 0) {
+                  calculatedProfit = totalTrackedProfit;
+                  
+                  double impliedCost = totalCurrentPrice - totalTrackedProfit;
+                  if (impliedCost > 0) {
+                    calculatedPercent = (totalTrackedProfit / impliedCost) * 100;
                   }
               }
               
@@ -374,13 +475,8 @@ class _InventoryPageState extends State<InventoryPage> {
                   type: group.first.type,
                   marketable: group.first.marketable,
                   price: totalCurrentPrice > 0 ? totalCurrentPrice : null,
-                  purchasePrice: null, // Not used for profit calc
+                  purchasePrice: null, 
               );
-              
-              double? calculatedProfit = hasAnyTracked ? totalTrackedProfit : null;
-              double? calculatedPercent = (hasAnyTracked && totalTrackedCost > 0) 
-                  ? (totalTrackedProfit / totalTrackedCost * 100) 
-                  : null;
 
               return buildItemCard(
                 context, 
@@ -389,6 +485,7 @@ class _InventoryPageState extends State<InventoryPage> {
                 count: group.length, 
                 customProfit: calculatedProfit,
                 customProfitPercent: calculatedPercent,
+                trackedCount: trackedCount, // 🔥 Pass tracked count
                 onTap: () {
                   if (group.length > 1) {
                     _showGroupDetails(context, key, group);

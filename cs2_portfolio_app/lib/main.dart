@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'inventory_page.dart';
 import 'market_page.dart';
 import 'services/inventory_service.dart';
+import 'widgets/portfolio_chart.dart';
 
 void main() {
   runApp(const MyApp());
@@ -34,6 +35,7 @@ class _HomePageState extends State<HomePage> {
   bool loading = true;
   DateTime? lastRefreshTime;
   DateTime? lastPriceRefresh;
+  List<Map<String, dynamic>> history = []; // 🔥 History data
 
   @override
   void initState() {
@@ -47,19 +49,21 @@ class _HomePageState extends State<HomePage> {
     });
 
     final service = InventoryService();
-    // Steam ID şimdilik hardcoded, ileride dinamik olabilir
+    // Steam ID şimdilik hardcoded
     final result = await service.fetchInventory("76561198253002919", forceUpdate: forceUpdate);
-    
+    final historyData = await service.fetchTotalHistory(); // 🔥 Fetch history
+
     if (mounted) {
       setState(() {
         totalValue = result.totalValue;
         totalPurchaseValue = result.totalPurchaseValue;
         totalValueForProfitCalc = result.totalValueForProfitCalc;
-        loading = false;
         lastRefreshTime = DateTime.now();
         if (result.lastPriceRefresh != null) {
           lastPriceRefresh = result.lastPriceRefresh;
         }
+        history = historyData; // 🔥 Update history
+        loading = false;
       });
     }
   }
@@ -67,7 +71,6 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     // Profit/Loss Calculation:
-    // Only compare (Current Value of Tracked Items) - (Purchase Price of Tracked Items)
     double profitLoss = totalValueForProfitCalc - totalPurchaseValue;
     
     // Calculate percentage relative to the TOTAL inventory value (Portfolio Growth)
@@ -180,16 +183,17 @@ class _HomePageState extends State<HomePage> {
 
             const SizedBox(height: 24),
 
-            // Placeholder chart
+            // 🔥 CHART
             Container(
-              height: 160,
+              height: 200, // Increased height slightly
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.black26,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Center(
-                child: Text("Chart Placeholder"),
-              ),
+              child: loading 
+                  ? const Center(child: CircularProgressIndicator())
+                  : PortfolioChart(history: history),
             ),
 
             const SizedBox(height: 24),

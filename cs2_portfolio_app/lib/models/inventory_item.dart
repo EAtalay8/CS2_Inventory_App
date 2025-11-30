@@ -8,6 +8,7 @@ class InventoryItem {
   final double? price;
   final double? previousPrice;
   final double? purchasePrice;
+  final bool isWatched;
   final DateTime? lastUpdated;
 
   InventoryItem({
@@ -20,19 +21,22 @@ class InventoryItem {
     this.price,
     this.previousPrice,
     this.purchasePrice,
+    this.isWatched = false,
     this.lastUpdated,
   });
 
   factory InventoryItem.fromJson(Map<String, dynamic> json) {
     return InventoryItem(
-      assetid: json["assetid"] ?? "",
-      classid: json["classid"] ?? "",
+      assetid: json["assetid"]?.toString() ?? "",
+      classid: json["classid"]?.toString() ?? "",
       name: json["name"] ?? "Unknown",
       icon: json["icon"] ?? "",
       type: json["type"] ?? "",
-      marketable: json["marketable"] ?? 0,
-      price: (json['price'] != null)
-          ? double.tryParse(json['price'].toString())
+      marketable: (json['marketable'] != null) 
+          ? int.tryParse(json['marketable'].toString()) ?? 1 
+          : 1,
+      price: (json['price'] != null) 
+          ? double.tryParse(json['price'].toString()) 
           : null,
       previousPrice: (json['previous_price'] != null)
           ? double.tryParse(json['previous_price'].toString())
@@ -40,6 +44,7 @@ class InventoryItem {
       purchasePrice: (json['purchase_price'] != null)
           ? double.tryParse(json['purchase_price'].toString())
           : null,
+      isWatched: json['is_watched'] == true,
       lastUpdated: json['last_updated'] != null 
           ? DateTime.fromMillisecondsSinceEpoch(json['last_updated']) 
           : null,

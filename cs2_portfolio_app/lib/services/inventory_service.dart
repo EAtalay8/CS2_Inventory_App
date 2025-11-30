@@ -63,23 +63,62 @@ class InventoryService {
   Future<bool> savePurchasePrice(String assetId, double? price) async {
     final url = Uri.parse("$baseUrl/portfolio/set-price");
     try {
-      final res = await http.post(
+      final response = await http.post(
         url,
         headers: {"Content-Type": "application/json"},
-        body: json.encode({
+        body: jsonEncode({
           "assetId": assetId,
           "price": price,
         }),
       );
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Error setting price: $e");
+      return false;
+    }
+  }
 
+  Future<bool> toggleWatch(String assetId, bool isWatched) async {
+    final url = Uri.parse("$baseUrl/portfolio/toggle-watch");
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({
+          "assetId": assetId,
+          "isWatched": isWatched,
+        }),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print("Error toggling watch: $e");
+      return false;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchTotalHistory() async {
+    final url = Uri.parse("$baseUrl/history/total");
+    try {
+      final res = await http.get(url);
       if (res.statusCode == 200) {
-        return true;
+        return List<Map<String, dynamic>>.from(json.decode(res.body));
       }
     } catch (e) {
-      print("Error saving price: $e");
+      print("Error fetching total history: $e");
     }
-    return false;
+    return [];
+  }
+
+  Future<List<Map<String, dynamic>>> fetchItemHistory(String marketName) async {
+    final url = Uri.parse("$baseUrl/history/item/${Uri.encodeComponent(marketName)}");
+    try {
+      final res = await http.get(url);
+      if (res.statusCode == 200) {
+        return List<Map<String, dynamic>>.from(json.decode(res.body));
+      }
+    } catch (e) {
+      print("Error fetching item history: $e");
+    }
+    return [];
   }
 }
-
-

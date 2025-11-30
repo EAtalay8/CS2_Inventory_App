@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'models/inventory_item.dart';
 import 'services/inventory_service.dart';
+import 'widgets/portfolio_chart.dart';
 
 class ItemDetailPage extends StatefulWidget {
   final InventoryItem item;
@@ -15,13 +16,51 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
   final TextEditingController _priceController = TextEditingController();
   double? purchasePrice;
   bool isSaving = false;
+  bool isWatched = false;
+  List<Map<String, dynamic>> history = []; // 🔥 History data
+  bool loadingHistory = true;
 
   @override
   void initState() {
     super.initState();
     purchasePrice = widget.item.purchasePrice;
+    isWatched = widget.item.isWatched; 
     if (purchasePrice != null) {
       _priceController.text = purchasePrice.toString();
+    }
+    _loadHistory();
+  }
+
+  Future<void> _loadHistory() async {
+    final service = InventoryService();
+    // Use market name for history lookup
+    final data = await service.fetchItemHistory(widget.item.name);
+    if (mounted) {
+      setState(() {
+        history = data;
+        loadingHistory = false;
+      });
+    }
+  }
+
+  Future<void> _toggleWatch() async {
+    setState(() {
+      isWatched = !isWatched;
+    });
+
+    final service = InventoryService();
+    final success = await service.toggleWatch(widget.item.assetid, isWatched);
+
+    if (!success) {
+      // Revert if failed
+      setState(() {
+        isWatched = !isWatched;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to update watch status")),
+        );
+      }
     }
   }
 
@@ -72,6 +111,16 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.item.name),
+        actions: [
+          IconButton(
+            icon: Icon(
+              isWatched ? Icons.star : Icons.star_border,
+              color: isWatched ? Colors.yellowAccent : null,
+            ),
+            onPressed: _toggleWatch,
+            tooltip: isWatched ? "Remove from Watchlist" : "Add to Watchlist",
+          ),
+        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -104,6 +153,31 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
             Text(
               widget.item.type,
               style: const TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+
+            const SizedBox(height: 24),
+
+            // 🔥 PRICE HISTORY CHART
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 8.0),
+                child: Text("Price History", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              ),
+            ),
+            Container(
+              height: 200,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.black26,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: loadingHistory
+                  ? const Center(child: CircularProgressIndicator())
+                  : PortfolioChart(
+                      history: history,
+                      isItemHistory: true, // Use item styling
+                    ),
             ),
 
             const SizedBox(height: 24),

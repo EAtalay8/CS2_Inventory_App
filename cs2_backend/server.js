@@ -191,6 +191,7 @@ async function processQueue() {
                 previous_price: previousPrice
             };
             savePriceDatabase(); // Her başarılı işlemde kaydet
+            addItemHistory(marketName, price); // 🔥 Record history
         } else {
             console.log("Failed to fetch:", marketName);
         }
@@ -242,6 +243,79 @@ app.post("/portfolio/set-price", express.json(), (req, res) => {
 
     savePortfolioDatabase();
     res.json({ success: true });
+});
+
+app.post("/portfolio/toggle-watch", express.json(), (req, res) => {
+    const { assetId, isWatched } = req.body;
+    if (!assetId) {
+        return res.status(400).json({ success: false, error: "Missing assetId" });
+    }
+
+    if (!portfolioDatabase[assetId]) {
+        portfolioDatabase[assetId] = { time: Date.now() };
+    }
+
+    portfolioDatabase[assetId].watch = isWatched;
+    console.log(`Set watch status for ${assetId}: ${isWatched}`);
+
+    savePortfolioDatabase();
+    res.json({ success: true });
+});
+
+// -------------------- HISTORY SYSTEM --------------------
+
+const HISTORY_FILE = "history.json";
+let historyDatabase = { total_value: [], items: {} };
+
+// Load History
+if (fs.existsSync(HISTORY_FILE)) {
+    try {
+        historyDatabase = JSON.parse(fs.readFileSync(HISTORY_FILE, "utf8"));
+        if (!historyDatabase.total_value) historyDatabase.total_value = [];
+        if (!historyDatabase.items) historyDatabase.items = {};
+        console.log("Loaded history database.");
+    } catch (e) {
+        console.error("Failed to load history.json", e);
+    }
+}
+
+function saveHistoryDatabase() {
+    try {
+        fs.writeFileSync(HISTORY_FILE, JSON.stringify(historyDatabase, null, 2));
+    } catch (e) {
+        console.error("Failed to save history.json", e);
+    }
+}
+
+// Helper to add item history
+function addItemHistory(marketName, price) {
+    if (!historyDatabase.items[marketName]) {
+        historyDatabase.items[marketName] = [];
+    }
+    historyDatabase.items[marketName].push({ time: Date.now(), price: price });
+    saveHistoryDatabase();
+}
+
+// Helper to add total value history
+function addTotalValueHistory(value) {
+    // Limit to 1 entry per hour to avoid spam
+    const lastEntry = historyDatabase.total_value[historyDatabase.total_value.length - 1];
+    const now = Date.now();
+    if (lastEntry && (now - lastEntry.time < 1000 * 60 * 60)) {
+        return; // Skip if less than 1 hour passed
+    }
+    historyDatabase.total_value.push({ time: now, value: value });
+    saveHistoryDatabase();
+}
+
+app.get("/history/total", (req, res) => {
+    res.json(historyDatabase.total_value);
+});
+
+app.get("/history/item/:name", (req, res) => {
+    const name = req.params.name;
+    const history = historyDatabase.items[name] || [];
+    res.json(history);
 });
 
 app.get("/inventory/:steamid/priced", async (req, res) => {
@@ -301,6 +375,7 @@ app.get("/inventory/:steamid/priced", async (req, res) => {
             // Portfolio verisini ekle
             const portfolioData = portfolioDatabase[i.assetid];
             const purchasePrice = portfolioData ? portfolioData.purchase_price : null;
+            const isWatched = portfolioData ? (portfolioData.watch === true) : false;
 
             if (purchasePrice) {
                 totalPurchaseValue += purchasePrice;
@@ -314,6 +389,7 @@ app.get("/inventory/:steamid/priced", async (req, res) => {
                 price: price,
                 previous_price: previousPrice,
                 purchase_price: purchasePrice,
+                is_watched: isWatched,
                 last_updated: lastUpdated
             };
         });
@@ -321,6 +397,11 @@ app.get("/inventory/:steamid/priced", async (req, res) => {
         if (queuedCount > 0) {
             console.log(`Added ${queuedCount} items to price queue.`);
             processQueue();
+        }
+
+        // 🔥 Record Total Value History (if not 0)
+        if (totalValue > 0) {
+            addTotalValueHistory(totalValue);
         }
 
         res.json({
