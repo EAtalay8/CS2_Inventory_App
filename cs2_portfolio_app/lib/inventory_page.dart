@@ -163,9 +163,7 @@ class _InventoryPageState extends State<InventoryPage> {
             onPressed: () {
               setState(() {
                 isGrid = !isGrid;
-                loading = true;
               });
-              loadInventory(); // limit değişsin ve backend’den yeniden çekelim
             }
           )
         ],

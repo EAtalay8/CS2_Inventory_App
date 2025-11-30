@@ -1,7 +1,7 @@
 // server.js
 
 const express = require("express");
-const axios = require("axios");     
+const axios = require("axios");
 const cors = require("cors");
 const cheerio = require("cheerio");
 
@@ -35,7 +35,17 @@ function parseNumeric(text) {
 
 // -------------------- INVENTORY FETCH --------------------
 
+const inventoryCache = {};
+const INVENTORY_TTL = 1000 * 60 * 5; // 5 dakika cache
+
 async function fetchInventory(steamId) {
+    // Cache kontrolü
+    const cached = inventoryCache[steamId];
+    if (cached && (Date.now() - cached.time < INVENTORY_TTL)) {
+        console.log("Serving inventory from cache:", steamId);
+        return cached.items;
+    }
+
     const appId = 730;
     const contextId = 2;
 
@@ -85,6 +95,9 @@ async function fetchInventory(steamId) {
             type: meta.type || "",
         };
     });
+
+    // Cache'e kaydet
+    inventoryCache[steamId] = { items, time: Date.now() };
 
     return items;
 }
