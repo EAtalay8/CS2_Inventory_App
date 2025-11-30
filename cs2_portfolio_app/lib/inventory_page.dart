@@ -129,7 +129,7 @@ class _InventoryPageState extends State<InventoryPage> {
     final service = InventoryService();
 
     // Grid için 15, List için 20
-    final limit = isGrid ? 15 : 20;
+    final limit = 15;
     print("Dynamic limit: $limit");
 
     final data = await service.fetchInventory(
@@ -138,11 +138,11 @@ class _InventoryPageState extends State<InventoryPage> {
     );
 
     // Fiyatı olanlar önce gelsin
-    data.sort((a, b) { 
+    /*data.sort((a, b) { 
       if (a.price == null && b.price != null) return 1;
       if (a.price != null && b.price == null) return -1;
       return 0;
-    });
+    });*/
 
     setState(() {
       items = data;

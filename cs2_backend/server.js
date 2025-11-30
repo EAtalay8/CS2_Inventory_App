@@ -242,57 +242,54 @@ async function runLimitedParallel(items, workerFn) {
 
 app.get("/inventory/:steamid/priced", async (req, res) => {
     const steamId = req.params.steamid;
-    const limit = parseInt(req.query.limit) || 20; // default: 20 item
+    const limit = parseInt(req.query.limit) || 20; // kaç tane fiyatlı item istiyoruz
     console.log("Price limit:", limit);
 
     try {
         // 1) Envanteri çek
         const items = await fetchInventory(steamId);
 
-        // 2) Unique market isimleri
-        const uniqueNames = Array.from(new Set(items.map(i => i.name))).slice(0, limit);
-        console.log("Unique item names (limited):", uniqueNames.length);
-
-        // 3) Önce priceoverview ile fiyatları çek (paralelli, hafif delay)
-        const overviewResults = await runLimitedParallel(uniqueNames, async (name) => {
-            await delay(300); // saniyede ~3 istek / worker
-            const price = await fetchPriceForMarketName(name);
-            return { name, price };
-        });
-
+        // 2) İlk 'limit' itemi al (fiyatı olsun olmasın)
         const priceMap = {};
-        overviewResults.forEach(r => {
-            priceMap[r.name] = r.price;
-        });
 
-        // 4) Hala null olanlar için scraper fallback
-        const needScrape = uniqueNames.filter(name => priceMap[name] == null);
-        console.log("Need scrape (fallback):", needScrape.length);
+        const limitedItems = items.slice(0, limit);
+        const limitedNames = limitedItems.map(i => i.name);
 
-        for (const name of needScrape) {
-            const r = await scrapeSteamMarketPrice(name);
-            priceMap[name] = r.price;
-            // scraper daha ağır → biraz bekle
-            await delay(1500);
+        console.log("Limited names:", limitedNames.length);
+
+        for (const name of limitedNames) {
+            await delay(350);
+
+            let price = await fetchPriceForMarketName(name);
+
+            // eğer overview fiyat vermediyse scraper dene
+            if (price == null) {
+                const scraped = await scrapeSteamMarketPrice(name);
+                price = scraped.price;
+            }
+
+            // hala null ise kullanıcıya "fiyat yok" göster
+            if (price == null) {
+                price = "fiyat yok";
+            }
+
+            priceMap[name] = price;
         }
 
-        // 5) Item'lara price ekle
+        // 3) itemlara price ekle
         const pricedItems = items.map(i => ({
             ...i,
             price: priceMap[i.name] ?? null
         }));
 
-        // istersen burada totalPrice da hesaplayabilirsin:
-        // const totalPrice = pricedItems.reduce((sum, i) => sum + (i.price || 0), 0);
-
         return res.json({
             success: true,
             total: pricedItems.length,
             items: pricedItems
-            // totalPrice
         });
+
     } catch (err) {
-        console.log("ERROR inventory/priced:", err.message);
+        console.log("ERROR priced:", err.message);
         return res.json({ success: false, error: err.message });
     }
 });
