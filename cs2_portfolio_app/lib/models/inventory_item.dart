@@ -4,7 +4,11 @@ class InventoryItem {
   final String name;
   final String icon;
   final String type;
+  final int marketable;
   final double? price;
+  final double? previousPrice;
+  final double? purchasePrice;
+  final DateTime? lastUpdated;
 
   InventoryItem({
     required this.assetid,
@@ -12,7 +16,11 @@ class InventoryItem {
     required this.name,
     required this.icon,
     required this.type,
+    this.marketable = 1,
     this.price,
+    this.previousPrice,
+    this.purchasePrice,
+    this.lastUpdated,
   });
 
   factory InventoryItem.fromJson(Map<String, dynamic> json) {
@@ -22,16 +30,26 @@ class InventoryItem {
       name: json["name"] ?? "Unknown",
       icon: json["icon"] ?? "",
       type: json["type"] ?? "",
+      marketable: json["marketable"] ?? 0,
       price: (json['price'] != null)
           ? double.tryParse(json['price'].toString())
+          : null,
+      previousPrice: (json['previous_price'] != null)
+          ? double.tryParse(json['previous_price'].toString())
+          : null,
+      purchasePrice: (json['purchase_price'] != null)
+          ? double.tryParse(json['purchase_price'].toString())
+          : null,
+      lastUpdated: json['last_updated'] != null 
+          ? DateTime.fromMillisecondsSinceEpoch(json['last_updated']) 
           : null,
     );
   }
 
-    String get rarity {
+  String get rarity {
     if (type.isEmpty) return "";
 
-    // Örnek: "Mil-Spec Grade Sniper Rifle"
+    // Example: "Mil-Spec Grade Sniper Rifle"
     final parts = type.split(" ");
 
     if (parts.length >= 2) {
@@ -40,5 +58,4 @@ class InventoryItem {
 
     return type;
   }
-
 }

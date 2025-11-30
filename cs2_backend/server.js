@@ -3,7 +3,7 @@
 const express = require("express");
 const axios = require("axios");
 const cors = require("cors");
-const cheerio = require("cheerio");
+const fs = require("fs");
 
 const app = express();
 app.use(cors());
@@ -93,6 +93,7 @@ async function fetchInventory(steamId) {
                 ? `https://steamcommunity-a.akamaihd.net/economy/image/${meta.icon_url}`
                 : null,
             type: meta.type || "",
+            marketable: meta.marketable // 1 or 0
         };
     });
 
@@ -113,197 +114,228 @@ app.get("/inventory/:steamid", async (req, res) => {
     }
 });
 
-// -------------------- PRICEOVERVIEW (hızlı API) --------------------
+// -------------------- PRICE QUEUE SYSTEM --------------------
 
-const priceCache = {};
-const PRICE_TTL = 1000 * 60 * 10; // 10 dk
+const DB_FILE = "prices.json";
 
-async function fetchPriceForMarketName(marketName) {
-    const cached = priceCache[marketName];
-    if (cached && (Date.now() - cached.time < PRICE_TTL)) {
-        return cached.price;
+let priceDatabase = {};
+const priceQueue = new Set();
+let isProcessing = false;
+
+// Load DB on start
+if (fs.existsSync(DB_FILE)) {
+    try {
+        priceDatabase = JSON.parse(fs.readFileSync(DB_FILE, "utf8"));
+        console.log("Loaded price database. Items:", Object.keys(priceDatabase).length);
+    } catch (e) {
+        console.error("Failed to load prices.json", e);
     }
+}
 
+function savePriceDatabase() {
+    try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(priceDatabase, null, 2));
+    } catch (e) {
+        console.error("Failed to save prices.json", e);
+    }
+}
+
+// Tekli fiyat çekme (Steam PriceOverview)
+async function fetchPriceForMarketName(marketName) {
     const encoded = encodeURIComponent(marketName);
     const url = `https://steamcommunity.com/market/priceoverview/?currency=1&appid=730&market_hash_name=${encoded}`;
 
     try {
-        const response = await axios.get(url, { timeout: 7000 });
+        const response = await axios.get(url, {
+            timeout: 10000,
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+        });
         const data = response.data;
 
-        if (!data || !data.success) {
-            console.log("priceoverview success=false:", marketName);
-            return null;
+        if (data && data.success) {
+            const priceStr = data.lowest_price || data.median_price;
+            return parseNumeric(priceStr);
         }
-
-        const priceStr = data.median_price || data.lowest_price;
-        const price = parseNumeric(priceStr);
-
-        priceCache[marketName] = { price, time: Date.now() };
-        return price;
     } catch (err) {
-        if (err.response && err.response.status === 429) {
-            console.log("Steam 429 priceoverview:", marketName);
-            if (priceCache[marketName]) {
-                return priceCache[marketName].price;
-            }
-        }
-        console.log("Priceoverview error:", marketName, "->", err.message);
-        return null;
+        console.log("Steam Price Error:", marketName, err.message);
     }
+    return null;
 }
 
-// -------------------- SCRAPER (fallback) --------------------
+async function processQueue() {
+    if (isProcessing) return;
+    isProcessing = true;
 
-const scraperCache = {};
-const SCRAPER_TTL = 1000 * 60 * 60; // 1 saat
+    console.log("Starting queue processing...");
 
-async function scrapeSteamMarketPrice(marketName) {
-    const cached = scraperCache[marketName];
-    if (cached && (Date.now() - cached.time < SCRAPER_TTL)) {
-        return { price: cached.price, raw: cached.raw };
-    }
+    while (priceQueue.size > 0) {
+        const marketName = priceQueue.values().next().value;
+        priceQueue.delete(marketName);
 
-    const encoded = encodeURIComponent(marketName);
-    const url = `https://steamcommunity.com/market/listings/730/${encoded}`;
+        // Cache check removed: If it's in the queue, we fetch it.
+        // The decision to queue is made upstream (in the endpoint).
 
-    console.log("Scraping:", marketName);
+        console.log("Queue fetching:", marketName);
+        const price = await fetchPriceForMarketName(marketName);
 
-    let attempts = 0;
-    while (attempts < 3) {
-        try {
-            const response = await axios.get(url, {
-                timeout: 10000,
-                headers: {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-                }
-            });
+        if (price !== null) {
+            // Save previous price if it exists
+            const oldEntry = priceDatabase[marketName];
+            const previousPrice = oldEntry ? oldEntry.price : null;
 
-            const html = response.data;
-
-            let priceText = null;
-            const jsonMatch = html.match(/"lowest_price":"([^"]+)"/);
-            if (jsonMatch && jsonMatch[1]) {
-                priceText = jsonMatch[1];
-            } else {
-                const $ = cheerio.load(html);
-                priceText = $(".market_listing_price_with_fee").first().text().trim();
-            }
-
-            const price = parseNumeric(priceText);
-
-            scraperCache[marketName] = {
+            priceDatabase[marketName] = {
                 price,
-                raw: priceText,
-                time: Date.now()
+                time: Date.now(),
+                previous_price: previousPrice
             };
-
-            return { price, raw: priceText };
-        } catch (err) {
-            if (err.response && err.response.status === 429) {
-                console.log("429! Scraper backoff →", marketName);
-                await delay(5000);
-                attempts++;
-                continue;
-            }
-            console.log("Scraper error:", marketName, "->", err.message);
-            return { price: null, raw: null };
+            savePriceDatabase(); // Her başarılı işlemde kaydet
+        } else {
+            console.log("Failed to fetch:", marketName);
         }
+
+        // Rate limit yememek için bekle
+        await delay(3500);
     }
 
-    return { price: null, raw: null };
+    isProcessing = false;
+    console.log("Queue processing finished.");
 }
 
-// -------------------- Küçük yardımcı endpointler --------------------
+// -------------------- PORTFOLIO SYSTEM --------------------
 
-app.get("/price/:marketName", async (req, res) => {
-    const name = req.params.marketName;
-    const price = await fetchPriceForMarketName(name);
-    res.json({ marketName: name, price });
-});
+const PORTFOLIO_FILE = "portfolio.json";
+let portfolioDatabase = {};
 
-app.get("/scrape-price/:marketName", async (req, res) => {
-    const name = req.params.marketName;
-    const result = await scrapeSteamMarketPrice(name);
-    res.json(result);
-});
-
-// -------------------- INVENTORY + PRICED --------------------
-
-const PARALLEL_LIMIT = 3; // priceoverview için max paralel istek
-
-async function runLimitedParallel(items, workerFn) {
-    const result = [];
-    let index = 0;
-
-    async function worker() {
-        while (index < items.length) {
-            const i = index++;
-            const r = await workerFn(items[i]);
-            result[i] = r;
-        }
+// Load Portfolio
+if (fs.existsSync(PORTFOLIO_FILE)) {
+    try {
+        portfolioDatabase = JSON.parse(fs.readFileSync(PORTFOLIO_FILE, "utf8"));
+        console.log("Loaded portfolio database. Items:", Object.keys(portfolioDatabase).length);
+    } catch (e) {
+        console.error("Failed to load portfolio.json", e);
     }
-
-    const workers = [];
-    for (let i = 0; i < PARALLEL_LIMIT; i++) {
-        workers.push(worker());
-    }
-
-    await Promise.all(workers);
-    return result;
 }
+
+function savePortfolioDatabase() {
+    try {
+        fs.writeFileSync(PORTFOLIO_FILE, JSON.stringify(portfolioDatabase, null, 2));
+    } catch (e) {
+        console.error("Failed to save portfolio.json", e);
+    }
+}
+
+app.post("/portfolio/set-price", express.json(), (req, res) => {
+    const { assetId, price } = req.body;
+    if (!assetId) {
+        return res.status(400).json({ success: false, error: "Missing assetId" });
+    }
+
+    if (price === null) {
+        delete portfolioDatabase[assetId];
+        console.log(`Removed purchase price for ${assetId}`);
+    } else {
+        portfolioDatabase[assetId] = { purchase_price: parseFloat(price), time: Date.now() };
+        console.log(`Set purchase price for ${assetId}: ${price}`);
+    }
+
+    savePortfolioDatabase();
+    res.json({ success: true });
+});
 
 app.get("/inventory/:steamid/priced", async (req, res) => {
     const steamId = req.params.steamid;
-    const limit = parseInt(req.query.limit) || 20; // kaç tane fiyatlı item istiyoruz
-    console.log("Price limit:", limit);
+
+    // Check for manual update flag
+    const forceUpdate = req.query.update_prices === 'true';
+
+    // Get last refresh time from portfolio DB
+    let lastPriceRefresh = portfolioDatabase['_meta']?.last_price_refresh || 0;
+    const now = Date.now();
+    const COOLDOWN = 1000 * 60 * 60 * 4; // 4 hours
+
+    let canUpdate = false;
+    if (forceUpdate) {
+        if (now - lastPriceRefresh > COOLDOWN) {
+            canUpdate = true;
+            // Update timestamp
+            if (!portfolioDatabase['_meta']) portfolioDatabase['_meta'] = {};
+            portfolioDatabase['_meta'].last_price_refresh = now;
+            lastPriceRefresh = now;
+            savePortfolioDatabase(); // Save meta to file
+            console.log("Manual price update triggered.");
+        } else {
+            console.log("Manual update ignored: Cooldown active.");
+        }
+    }
 
     try {
-        // 1) Envanteri çek
+        // 1. Get Inventory (Cached)
         const items = await fetchInventory(steamId);
 
-        // 2) İlk 'limit' itemi al (fiyatı olsun olmasın)
-        const priceMap = {};
+        let totalValue = 0;
+        let totalPurchaseValue = 0;
+        let totalValueForProfitCalc = 0;
+        let queuedCount = 0;
+        // 2. Match with Prices
+        const pricedItems = items.map(i => {
+            const dbEntry = priceDatabase[i.name];
+            let price = null;
+            let previousPrice = null;
+            let lastUpdated = null;
 
-        const limitedItems = items.slice(0, limit);
-        const limitedNames = limitedItems.map(i => i.name);
-
-        console.log("Limited names:", limitedNames.length);
-
-        for (const name of limitedNames) {
-            await delay(350);
-
-            let price = await fetchPriceForMarketName(name);
-
-            // eğer overview fiyat vermediyse scraper dene
-            if (price == null) {
-                const scraped = await scrapeSteamMarketPrice(name);
-                price = scraped.price;
+            if (dbEntry) {
+                price = dbEntry.price;
+                previousPrice = dbEntry.previous_price || null;
+                lastUpdated = dbEntry.time; // Timestamp
+                totalValue += price;
             }
 
-            // hala null ise kullanıcıya "fiyat yok" göster
-            if (price == null) {
-                price = "fiyat yok";
+            // Queue logic: Only queue if canUpdate is true AND item is marketable AND not already in queue
+            if (canUpdate && i.marketable === 1 && !priceQueue.has(i.name)) {
+                priceQueue.add(i.name);
+                queuedCount++;
             }
 
-            priceMap[name] = price;
-        }
+            // Portfolio verisini ekle
+            const portfolioData = portfolioDatabase[i.assetid];
+            const purchasePrice = portfolioData ? portfolioData.purchase_price : null;
 
-        // 3) itemlara price ekle
-        const pricedItems = items.map(i => ({
-            ...i,
-            price: priceMap[i.name] ?? null
-        }));
+            if (purchasePrice) {
+                totalPurchaseValue += purchasePrice;
+                if (price) {
+                    totalValueForProfitCalc += price;
+                }
+            }
 
-        return res.json({
-            success: true,
-            total: pricedItems.length,
-            items: pricedItems
+            return {
+                ...i,
+                price: price,
+                previous_price: previousPrice,
+                purchase_price: purchasePrice,
+                last_updated: lastUpdated
+            };
         });
 
-    } catch (err) {
-        console.log("ERROR priced:", err.message);
-        return res.json({ success: false, error: err.message });
+        if (queuedCount > 0) {
+            console.log(`Added ${queuedCount} items to price queue.`);
+            processQueue();
+        }
+
+        res.json({
+            success: true,
+            items: pricedItems,
+            total_value: totalValue,
+            total_purchase_value: totalPurchaseValue,
+            total_value_for_profit_calc: totalValueForProfitCalc,
+            queued_count: queuedCount,
+            last_price_refresh: lastPriceRefresh
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: "Failed to fetch inventory" });
     }
 });
 
