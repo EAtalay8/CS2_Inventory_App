@@ -4,6 +4,23 @@ import '../models/inventory_item.dart';
 import 'item_detail_page.dart';
 import 'package:cs2_portfolio_app/services/rarity_color_service.dart';
 
+int calculateDynamicLimit(bool isGrid, BuildContext context) {
+  final size = MediaQuery.of(context).size;
+
+  if (isGrid) {
+    int columns = 3; // GridView zaten 3 sütun
+    double itemHeight = 150; // item kartı yüksekliği + padding
+    int rows = (size.height / itemHeight).floor();
+
+    return (columns * rows).clamp(9, 60); 
+  } else {
+    double itemHeight = 70; // ListTile yüksekliği
+    int rows = (size.height / itemHeight).floor();
+
+    return rows.clamp(10, 40);
+  }
+}
+
 Widget buildItemCard(BuildContext context, InventoryItem item, {bool isGrid = false}) {
   return Container(
     decoration: BoxDecoration(
@@ -40,17 +57,49 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {bool isGrid = fa
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontSize: 12),
                   ),
+
+                  // 🔥 PRICE (eğer varsa)
+                  Text(
+                    item.price != null
+                      ? "\$${item.price!.toStringAsFixed(2)}"
+                      : "-",               //fiyat yoksa "-"
+                      
+                    style: TextStyle(
+                      color: item.price != null ? Colors.green : Colors.grey,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ],
               )
             : ListTile(
                 leading: item.icon.isNotEmpty
                     ? Hero(
-                      tag: item.assetid,
-                      child: Image.network(item.icon, width: 40),
-                    )
+                        tag: item.assetid,
+                        child: Image.network(item.icon, width: 40),
+                      )
                     : const Icon(Icons.image_not_supported),
                 title: Text(item.name),
-                subtitle: Text("${item.type}\nAssetID: ${item.assetid}"),
+                subtitle: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(item.type),
+                    Text("AssetID: ${item.assetid}"),
+
+                    // 🔥 PRICE
+                    Text(
+                      item.price != null
+                        ? "\$${item.price!.toStringAsFixed(2)}"
+                        : "-",               //fiyat yoksa "-"
+                      style: TextStyle(
+                        color: item.price != null ? Colors.green : Colors.grey,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                //subtitle: Text("${item.type}\nAssetID: ${item.assetid}"),
               ),
       ),
     ),
@@ -78,7 +127,22 @@ class _InventoryPageState extends State<InventoryPage> {
 
   Future<void> loadInventory() async {
     final service = InventoryService();
-    final data = await service.fetchInventory("76561198253002919");
+
+    // Grid için 15, List için 20
+    final limit = isGrid ? 15 : 20;
+    print("Dynamic limit: $limit");
+
+    final data = await service.fetchInventory(
+      "76561198253002919",
+      limit: limit
+    );
+
+    // Fiyatı olanlar önce gelsin
+    data.sort((a, b) { 
+      if (a.price == null && b.price != null) return 1;
+      if (a.price != null && b.price == null) return -1;
+      return 0;
+    });
 
     setState(() {
       items = data;
@@ -99,7 +163,9 @@ class _InventoryPageState extends State<InventoryPage> {
             onPressed: () {
               setState(() {
                 isGrid = !isGrid;
+                loading = true;
               });
+              loadInventory(); // limit değişsin ve backend’den yeniden çekelim
             }
           )
         ],

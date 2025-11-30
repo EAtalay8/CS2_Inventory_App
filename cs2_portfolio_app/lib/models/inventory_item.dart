@@ -4,6 +4,7 @@ class InventoryItem {
   final String name;
   final String icon;
   final String type;
+  final double? price;
 
   InventoryItem({
     required this.assetid,
@@ -11,6 +12,7 @@ class InventoryItem {
     required this.name,
     required this.icon,
     required this.type,
+    this.price,
   });
 
   factory InventoryItem.fromJson(Map<String, dynamic> json) {
@@ -20,6 +22,9 @@ class InventoryItem {
       name: json["name"] ?? "Unknown",
       icon: json["icon"] ?? "",
       type: json["type"] ?? "",
+      price: (json['price'] != null)
+          ? double.tryParse(json['price'].toString())
+          : null,
     );
   }
 

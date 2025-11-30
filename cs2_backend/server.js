@@ -1,78 +1,41 @@
+// server.js
+
 const express = require("express");
-const axios = require("axios");
+const axios = require("axios");     
 const cors = require("cors");
 const cheerio = require("cheerio");
-
 
 const app = express();
 app.use(cors());
 
+// -------------------- Genel helperlar --------------------
 
-function parsePriceText(text) {
+function delay(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// "₺ 123,45", "$13.40", "1.234,56 TL" -> 123.45
+function parseNumeric(text) {
     if (!text) return null;
-
-    // Örnek: "₺ 123,45", "$13.40", "1.234,56 TL"
     const m = text.match(/[\d.,]+/);
     if (!m) return null;
 
     let numStr = m[0];
 
-    // Türk formatı: 1.234,56  ->  1234.56
     if (numStr.includes(",") && numStr.includes(".")) {
+        // 1.234,56 -> 1234.56
         numStr = numStr.replace(/\./g, "").replace(",", ".");
-    }
-    // Sadece virgül varsa: 123,45 -> 123.45
-    else if (numStr.includes(",") && !numStr.includes(".")) {
+    } else if (numStr.includes(",") && !numStr.includes(".")) {
+        // 123,45 -> 123.45
         numStr = numStr.replace(",", ".");
     }
-    // Sadece nokta varsa: olduğu gibi bırak
-
     const val = parseFloat(numStr);
     return isNaN(val) ? null : val;
 }
 
-async function scrapeSteamMarketPrice(marketName) {
-    const encoded = encodeURIComponent(marketName);
-    const url = `https://steamcommunity.com/market/listings/730/${encoded}`;
+// -------------------- INVENTORY FETCH --------------------
 
-    console.log("Scraping:", url);
-
-    try {
-        const response = await axios.get(url, {
-            timeout: 10000,
-            headers: {
-                // Normal browser gibi görünelim
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-            }
-        });
-
-        const html = response.data;
-
-        // 1) Önce sayfada gömülü JSON içindeki "lowest_price" alanını dene
-        const jsonMatch = html.match(/"lowest_price":"([^"]+)"/);
-        let priceText = null;
-
-        if (jsonMatch && jsonMatch[1]) {
-            priceText = jsonMatch[1];
-        } else {
-            // 2) Bulamazsak, HTML'deki fiyat label'ını dene
-            const $ = cheerio.load(html);
-            // market_listing_price_with_fee class'lı ilk elementi al
-            priceText = $(".market_listing_price_with_fee").first().text().trim();
-        }
-
-        const price = parsePriceText(priceText);
-        return { price, raw: priceText };
-
-    } catch (err) {
-        console.log("Scrape error:", err.message);
-        return { price: null, raw: null };
-    }
-}
-
-
-app.get("/inventory/:steamid", async (req, res) => {
-    const steamId = req.params.steamid;
+async function fetchInventory(steamId) {
     const appId = 730;
     const contextId = 2;
 
@@ -81,88 +44,68 @@ app.get("/inventory/:steamid", async (req, res) => {
     let descriptions = {};
     let visitedPages = new Set();
 
+    while (true) {
+        console.log("Fetching inventory page:", startAssetId || "first");
+
+        const url =
+            `https://steamcommunity.com/inventory/${steamId}/${appId}/${contextId}` +
+            `?l=english&count=200${startAssetId ? "&start_assetid=" + startAssetId : ""}`;
+
+        const response = await axios.get(url);
+        const data = response.data;
+
+        if (!data || !data.assets) {
+            throw new Error("Inventory not found");
+        }
+
+        assets.push(...data.assets);
+
+        if (data.descriptions) {
+            for (let d of data.descriptions) {
+                descriptions[d.classid] = d;
+            }
+        }
+
+        if (!data.more_items) break;
+        if (visitedPages.has(data.last_assetid)) break;
+
+        visitedPages.add(data.last_assetid);
+        startAssetId = data.last_assetid;
+    }
+
+    const items = assets.map(asset => {
+        const meta = descriptions[asset.classid] || {};
+        return {
+            assetid: asset.assetid,
+            classid: asset.classid,
+            name: meta.market_name || meta.name || "Unknown",
+            icon: meta.icon_url
+                ? `https://steamcommunity-a.akamaihd.net/economy/image/${meta.icon_url}`
+                : null,
+            type: meta.type || "",
+        };
+    });
+
+    return items;
+}
+
+// sade inventory endpoint (fiyatsız)
+app.get("/inventory/:steamid", async (req, res) => {
     try {
-        while (true) {
-            console.log("Fetching page:", startAssetId || "first");
-
-            const url =
-                `https://steamcommunity.com/inventory/${steamId}/${appId}/${contextId}` +
-                `?l=english&count=200${startAssetId ? "&start_assetid=" + startAssetId : ""}`;
-
-            const response = await axios.get(url);
-            const data = response.data;
-
-            if (!data || !data.assets) {
-                return res.json({ success: false, error: "Inventory not found" });
-            }
-
-            assets.push(...data.assets);
-
-            if (data.descriptions) {
-                for (let d of data.descriptions) {
-                    descriptions[d.classid] = d;
-                }
-            }
-
-            if (!data.more_items) break;
-
-            if (visitedPages.has(data.last_assetid)) break;
-
-            visitedPages.add(data.last_assetid);
-            startAssetId = data.last_assetid;
-        }
-
-        const merged = [];
-
-        for (let asset of assets) {
-            const meta = descriptions[asset.classid] || {};
-            const name = meta.market_name || meta.name || "Unknown";
-
-            merged.push({
-                assetid: asset.assetid,
-                classid: asset.classid,
-                name,
-                icon: meta.icon_url
-                    ? `https://steamcommunity-a.akamaihd.net/economy/image/${meta.icon_url}`
-                    : null,
-                type: meta.type || "",
-            });
-        }
-
-        return res.json({
-            success: true,
-            total: merged.length,
-            items: merged
-        });
-
+        const items = await fetchInventory(req.params.steamid);
+        res.json({ success: true, total: items.length, items });
     } catch (err) {
-        console.log("ERROR:", err.message);
-        return res.json({ success: false, error: err.message });
+        console.log("ERROR inventory:", err.message);
+        res.json({ success: false, error: err.message });
     }
 });
 
+// -------------------- PRICEOVERVIEW (hızlı API) --------------------
 
-// ---------------------------------------
-//  AŞAMA 1: FİYAT HELPER + CACHE
-// ---------------------------------------
-
-// Basit RAM cache: { "AK-47 | Redline (Field-Tested)": { price, time } }
 const priceCache = {};
-const PRICE_TTL = 1000 * 60 * 10; // 10 dakika
+const PRICE_TTL = 1000 * 60 * 10; // 10 dk
 
-// "$13.40" gibi string'den sayıyı çıkar
-function parseSteamPrice(str) {
-    if (!str) return null;
-    const match = str.match(/[\d.,]+/);
-    if (!match) return null;
-    const normalized = match[0].replace(/,/g, "");
-    const val = parseFloat(normalized);
-    return isNaN(val) ? null : val;
-}
-
-// Tek bir market_name için fiyat çeken helper
 async function fetchPriceForMarketName(marketName) {
-    // 1) Cache kontrolü
     const cached = priceCache[marketName];
     if (cached && (Date.now() - cached.time < PRICE_TTL)) {
         return cached.price;
@@ -176,147 +119,184 @@ async function fetchPriceForMarketName(marketName) {
         const data = response.data;
 
         if (!data || !data.success) {
-            console.log("Steam priceoverview success=false:", marketName);
+            console.log("priceoverview success=false:", marketName);
             return null;
         }
 
         const priceStr = data.median_price || data.lowest_price;
-        const price = parseSteamPrice(priceStr);
+        const price = parseNumeric(priceStr);
 
-        // Cache'e yaz
-        priceCache[marketName] = {
-            price,
-            time: Date.now()
-        };
-
+        priceCache[marketName] = { price, time: Date.now() };
         return price;
     } catch (err) {
         if (err.response && err.response.status === 429) {
-            console.log("Steam 429 rate limit:", marketName);
-            // Rate limitte, varsa eski cache değerini dönebiliriz
+            console.log("Steam 429 priceoverview:", marketName);
             if (priceCache[marketName]) {
                 return priceCache[marketName].price;
             }
         }
-
-        console.log("Price fetch error:", marketName, "->", err.message);
+        console.log("Priceoverview error:", marketName, "->", err.message);
         return null;
     }
 }
 
-// -------------------------------
-// SCRAPER PRICE ENDPOINT
-// -------------------------------
-app.get("/scrape-price/:marketName", async (req, res) => {
-    const marketName = req.params.marketName;
-    const result = await scrapeSteamMarketPrice(marketName);
-    return res.json(result);
-});
+// -------------------- SCRAPER (fallback) --------------------
 
+const scraperCache = {};
+const SCRAPER_TTL = 1000 * 60 * 60; // 1 saat
 
+async function scrapeSteamMarketPrice(marketName) {
+    const cached = scraperCache[marketName];
+    if (cached && (Date.now() - cached.time < SCRAPER_TTL)) {
+        return { price: cached.price, raw: cached.raw };
+    }
 
-// Debug / tek item fiyat görmek için:
-// GET /price/AK-47%20%7C%20Redline%20%28Field-Tested%29
+    const encoded = encodeURIComponent(marketName);
+    const url = `https://steamcommunity.com/market/listings/730/${encoded}`;
+
+    console.log("Scraping:", marketName);
+
+    let attempts = 0;
+    while (attempts < 3) {
+        try {
+            const response = await axios.get(url, {
+                timeout: 10000,
+                headers: {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+                }
+            });
+
+            const html = response.data;
+
+            let priceText = null;
+            const jsonMatch = html.match(/"lowest_price":"([^"]+)"/);
+            if (jsonMatch && jsonMatch[1]) {
+                priceText = jsonMatch[1];
+            } else {
+                const $ = cheerio.load(html);
+                priceText = $(".market_listing_price_with_fee").first().text().trim();
+            }
+
+            const price = parseNumeric(priceText);
+
+            scraperCache[marketName] = {
+                price,
+                raw: priceText,
+                time: Date.now()
+            };
+
+            return { price, raw: priceText };
+        } catch (err) {
+            if (err.response && err.response.status === 429) {
+                console.log("429! Scraper backoff →", marketName);
+                await delay(5000);
+                attempts++;
+                continue;
+            }
+            console.log("Scraper error:", marketName, "->", err.message);
+            return { price: null, raw: null };
+        }
+    }
+
+    return { price: null, raw: null };
+}
+
+// -------------------- Küçük yardımcı endpointler --------------------
+
 app.get("/price/:marketName", async (req, res) => {
-    const marketName = req.params.marketName;
-    const price = await fetchPriceForMarketName(marketName);
-    return res.json({ marketName, price});
+    const name = req.params.marketName;
+    const price = await fetchPriceForMarketName(name);
+    res.json({ marketName: name, price });
 });
 
-// ---------------------------------------
-//  ENVANTER + FİYATLI ENDPOINT
-//  GET /inventory/:steamid/priced
-// ---------------------------------------
+app.get("/scrape-price/:marketName", async (req, res) => {
+    const name = req.params.marketName;
+    const result = await scrapeSteamMarketPrice(name);
+    res.json(result);
+});
+
+// -------------------- INVENTORY + PRICED --------------------
+
+const PARALLEL_LIMIT = 3; // priceoverview için max paralel istek
+
+async function runLimitedParallel(items, workerFn) {
+    const result = [];
+    let index = 0;
+
+    async function worker() {
+        while (index < items.length) {
+            const i = index++;
+            const r = await workerFn(items[i]);
+            result[i] = r;
+        }
+    }
+
+    const workers = [];
+    for (let i = 0; i < PARALLEL_LIMIT; i++) {
+        workers.push(worker());
+    }
+
+    await Promise.all(workers);
+    return result;
+}
 
 app.get("/inventory/:steamid/priced", async (req, res) => {
     const steamId = req.params.steamid;
-
-    // Önce normal envanteri alalım (yukarıdaki kodu tekrar yazmamak için)
-    const appId = 730;
-    const contextId = 2;
-
-    let startAssetId = "";
-    let assets = [];
-    let descriptions = {};
-    let visitedPages = new Set();
+    const limit = parseInt(req.query.limit) || 20; // default: 20 item
+    console.log("Price limit:", limit);
 
     try {
-        while (true) {
-            console.log("Fetching page (priced):", startAssetId || "first");
+        // 1) Envanteri çek
+        const items = await fetchInventory(steamId);
 
-            const url =
-                `https://steamcommunity.com/inventory/${steamId}/${appId}/${contextId}` +
-                `?l=english&count=200${startAssetId ? "&start_assetid=" + startAssetId : ""}`;
+        // 2) Unique market isimleri
+        const uniqueNames = Array.from(new Set(items.map(i => i.name))).slice(0, limit);
+        console.log("Unique item names (limited):", uniqueNames.length);
 
-            const response = await axios.get(url);
-            const data = response.data;
-
-            if (!data || !data.assets) {
-                return res.json({ success: false, error: "Inventory not found" });
-            }
-
-            assets.push(...data.assets);
-
-            if (data.descriptions) {
-                for (let d of data.descriptions) {
-                    descriptions[d.classid] = d;
-                }
-            }
-
-            if (!data.more_items) break;
-
-            if (visitedPages.has(data.last_assetid)) break;
-
-            visitedPages.add(data.last_assetid);
-            startAssetId = data.last_assetid;
-        }
-
-        // 1) Tüm itemleri oluştur
-        const items = [];
-        for (let asset of assets) {
-            const meta = descriptions[asset.classid] || {};
-            const name = meta.market_name || meta.name || "Unknown";
-
-            items.push({
-                assetid: asset.assetid,
-                classid: asset.classid,
-                name,
-                icon: meta.icon_url
-                    ? `https://steamcommunity-a.akamaihd.net/economy/image/${meta.icon_url}`
-                    : null,
-                type: meta.type || "",
-            });
-        }
-
-        // 2) Unique market isimlerini çıkar
-        const uniqueNames = Array.from(new Set(items.map(i => i.name)));
-
-        console.log("Unique item count:", uniqueNames.length);
-
-        // 3) Her unique isim için fiyat çek
-        const priceMap = {};
-        for (let name of uniqueNames) {
+        // 3) Önce priceoverview ile fiyatları çek (paralelli, hafif delay)
+        const overviewResults = await runLimitedParallel(uniqueNames, async (name) => {
+            await delay(300); // saniyede ~3 istek / worker
             const price = await fetchPriceForMarketName(name);
-            priceMap[name] = price; // price null da olabilir, sorun değil
+            return { name, price };
+        });
+
+        const priceMap = {};
+        overviewResults.forEach(r => {
+            priceMap[r.name] = r.price;
+        });
+
+        // 4) Hala null olanlar için scraper fallback
+        const needScrape = uniqueNames.filter(name => priceMap[name] == null);
+        console.log("Need scrape (fallback):", needScrape.length);
+
+        for (const name of needScrape) {
+            const r = await scrapeSteamMarketPrice(name);
+            priceMap[name] = r.price;
+            // scraper daha ağır → biraz bekle
+            await delay(1500);
         }
 
-        // 4) Itemlere price alanını ekle
-        const pricedItems = items.map(item => ({
-            ...item,
-            price: priceMap[item.name] ?? null
+        // 5) Item'lara price ekle
+        const pricedItems = items.map(i => ({
+            ...i,
+            price: priceMap[i.name] ?? null
         }));
+
+        // istersen burada totalPrice da hesaplayabilirsin:
+        // const totalPrice = pricedItems.reduce((sum, i) => sum + (i.price || 0), 0);
 
         return res.json({
             success: true,
             total: pricedItems.length,
             items: pricedItems
+            // totalPrice
         });
-
     } catch (err) {
-        console.log("ERROR (priced):", err.message);
+        console.log("ERROR inventory/priced:", err.message);
         return res.json({ success: false, error: err.message });
     }
 });
 
+// -------------------- SERVER --------------------
 
-app.listen(3000, '0.0.0.0', () => console.log("Backend running on port 3000"));
+app.listen(3000, "0.0.0.0", () => console.log("Backend running on port 3000"));
