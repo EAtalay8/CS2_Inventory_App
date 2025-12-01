@@ -3,7 +3,1200 @@
     {
       "time": 1764527997381,
       "value": 620.9599999999992
+    },
+    {
+      "time": 1764583223183,
+      "value": 620.9599999999992
+    },
+    {
+      "time": 1764585435261,
+      "value": 609.959999999999
+    },
+    {
+      "time": 1764586459426,
+      "value": 609.959999999999
+    },
+    {
+      "time": 1764591102970,
+      "value": 609.959999999999
+    },
+    {
+      "time": 1764591511638,
+      "value": 609.959999999999
+    },
+    {
+      "time": 1764592669106,
+      "value": 609.959999999999
+    },
+    {
+      "time": 1764594415310,
+      "value": 609.959999999999
     }
   ],
-  "items": {}
+  "items": {
+    "Dreams & Nightmares Case": [
+      {
+        "time": 1764583247546,
+        "price": 1.81
+      }
+    ],
+    "Five-SeveN | Coolant (Factory New)": [
+      {
+        "time": 1764583251269,
+        "price": 0.06
+      }
+    ],
+    "SSG 08 | Acid Fade (Factory New)": [
+      {
+        "time": 1764583254990,
+        "price": 1.03
+      }
+    ],
+    "P250 | Facility Draft (Field-Tested)": [
+      {
+        "time": 1764583258739,
+        "price": 0.03
+      }
+    ],
+    "Recoil Case": [
+      {
+        "time": 1764583262506,
+        "price": 0.38
+      }
+    ],
+    "AK-47 | Ice Coaled (Field-Tested)": [
+      {
+        "time": 1764583266289,
+        "price": 5.83
+      }
+    ],
+    "Sticker | Vice Cursor": [
+      {
+        "time": 1764583270035,
+        "price": 0.17
+      }
+    ],
+    "Sticker | Please Return To": [
+      {
+        "time": 1764583273792,
+        "price": 0.04
+      }
+    ],
+    "Fever Case": [
+      {
+        "time": 1764583277520,
+        "price": 0.89
+      }
+    ],
+    "M4A1-S | Black Lotus (Minimal Wear)": [
+      {
+        "time": 1764583281275,
+        "price": 13.89
+      }
+    ],
+    "★ Paracord Knife | Blue Steel (Field-Tested)": [
+      {
+        "time": 1764583285050,
+        "price": 112.36
+      }
+    ],
+    "Kilowatt Case": [
+      {
+        "time": 1764583288791,
+        "price": 0.32
+      }
+    ],
+    "MP9 | Buff Blue (Factory New)": [
+      {
+        "time": 1764583292527,
+        "price": 0.3
+      }
+    ],
+    "Dual Berettas | Moon in Libra (Factory New)": [
+      {
+        "time": 1764583296303,
+        "price": 9
+      }
+    ],
+    "Gallery Case": [
+      {
+        "time": 1764583300102,
+        "price": 1.51
+      }
+    ],
+    "Sticker | Senzu | Austin 2025": [
+      {
+        "time": 1764583303842,
+        "price": 0.03
+      }
+    ],
+    "Revolution Case": [
+      {
+        "time": 1764583307556,
+        "price": 0.41
+      }
+    ],
+    "Austin 2025 Mirage Souvenir Highlight Package": [
+      {
+        "time": 1764583311308,
+        "price": 4
+      }
+    ],
+    "Sticker | G2 Esports | Austin 2025": [
+      {
+        "time": 1764583315045,
+        "price": 0.03
+      }
+    ],
+    "Souvenir MP9 | Slide (Minimal Wear)": [
+      {
+        "time": 1764583318792,
+        "price": 0.09
+      }
+    ],
+    "Sticker | Chinggis Warriors | Austin 2025": [
+      {
+        "time": 1764583322544,
+        "price": 0.05
+      }
+    ],
+    "Sticker | Virtus.Pro | Austin 2025": [
+      {
+        "time": 1764583326322,
+        "price": 0.04
+      }
+    ],
+    "AK-47 | Aquamarine Revenge (Well-Worn)": [
+      {
+        "time": 1764583330067,
+        "price": 45.26
+      }
+    ],
+    "Sticker | Legacy | Austin 2025": [
+      {
+        "time": 1764583333792,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Imperial Esports | Austin 2025": [
+      {
+        "time": 1764583337537,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Nemiga | Austin 2025": [
+      {
+        "time": 1764583341292,
+        "price": 0.04
+      }
+    ],
+    "Sticker | Lynn Vision | Austin 2025": [
+      {
+        "time": 1764583345023,
+        "price": 0.07
+      }
+    ],
+    "Sticker | HEROIC | Austin 2025": [
+      {
+        "time": 1764583348781,
+        "price": 0.04
+      }
+    ],
+    "Sticker | XANTARES | Austin 2025": [
+      {
+        "time": 1764583352568,
+        "price": 0.05
+      }
+    ],
+    "Souvenir Charm | Austin 2025 Highlight | ZywOo Smoke Criminal": [
+      {
+        "time": 1764583356350,
+        "price": 0.3
+      }
+    ],
+    "Souvenir MP7 | Sunbaked (Battle-Scarred)": [
+      {
+        "time": 1764583360105,
+        "price": 0.07
+      }
+    ],
+    "Souvenir P250 | Constructivist (Factory New)": [
+      {
+        "time": 1764583363860,
+        "price": 0.23
+      }
+    ],
+    "Souvenir MAC-10 | Sienna Damask (Field-Tested)": [
+      {
+        "time": 1764583367615,
+        "price": 0.04
+      }
+    ],
+    "Sticker | 3DMAX | Austin 2025": [
+      {
+        "time": 1764583371362,
+        "price": 0.04
+      }
+    ],
+    "Sticker | MOUZ | Austin 2025": [
+      {
+        "time": 1764583375088,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Aurora | Austin 2025": [
+      {
+        "time": 1764583378831,
+        "price": 0.04
+      }
+    ],
+    "Sticker | FURIA | Austin 2025": [
+      {
+        "time": 1764583382655,
+        "price": 0.05
+      }
+    ],
+    "Sticker | The Mongolz | Austin 2025": [
+      {
+        "time": 1764583386428,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Vitality | Austin 2025": [
+      {
+        "time": 1764583390257,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Natus Vincere | Austin 2025": [
+      {
+        "time": 1764583393992,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Team Liquid | Austin 2025": [
+      {
+        "time": 1764583397743,
+        "price": 0.03
+      }
+    ],
+    "Zeus x27 | Swamp DDPAT (Minimal Wear)": [
+      {
+        "time": 1764583401463,
+        "price": 0.05
+      }
+    ],
+    "R8 Revolver | Tango (Minimal Wear)": [
+      {
+        "time": 1764583405219,
+        "price": 0.55
+      }
+    ],
+    "Sticker | rain | Paris 2023": [
+      {
+        "time": 1764583408949,
+        "price": 0.03
+      }
+    ],
+    "Sticker | rain | Shanghai 2024": [
+      {
+        "time": 1764583412704,
+        "price": 0.05
+      }
+    ],
+    "Sticker | rain | Copenhagen 2024": [
+      {
+        "time": 1764583416461,
+        "price": 0.04
+      }
+    ],
+    "Sticker | rain | Antwerp 2022": [
+      {
+        "time": 1764583420204,
+        "price": 0.03
+      }
+    ],
+    "Sealed Graffiti | Ninja (Shark White)": [
+      {
+        "time": 1764583423940,
+        "price": 0.04
+      }
+    ],
+    "Sticker | karrigan | Berlin 2019": [
+      {
+        "time": 1764583427805,
+        "price": 0.57
+      }
+    ],
+    "Sticker | FalleN | Berlin 2019": [
+      {
+        "time": 1764583431538,
+        "price": 0.69
+      }
+    ],
+    "Sticker | Vertigo's Hero (Holo)": [
+      {
+        "time": 1764583435284,
+        "price": 0.7
+      }
+    ],
+    "P90 | Nostalgia (Field-Tested)": [
+      {
+        "time": 1764583439024,
+        "price": 6.26
+      }
+    ],
+    "P250 | Inferno (Field-Tested)": [
+      {
+        "time": 1764583442753,
+        "price": 0.82
+      }
+    ],
+    "MP5-SD | Agent (Field-Tested)": [
+      {
+        "time": 1764583446491,
+        "price": 0.74
+      }
+    ],
+    "Glock-18 | Sacrifice (Minimal Wear)": [
+      {
+        "time": 1764583450254,
+        "price": 0.42
+      }
+    ],
+    "FAMAS | Decommissioned (Minimal Wear)": [
+      {
+        "time": 1764583453994,
+        "price": 0.37
+      }
+    ],
+    "SCAR-20 | Assault (Factory New)": [
+      {
+        "time": 1764583457755,
+        "price": 0.55
+      }
+    ],
+    "Sticker | Nemiga (Holo) | 2020 RMR": [
+      {
+        "time": 1764583461485,
+        "price": 0.32
+      }
+    ],
+    "Sticker | Vitality (Holo) | 2020 RMR": [
+      {
+        "time": 1764583465227,
+        "price": 0.13
+      }
+    ],
+    "Sticker | FalleN (Holo) | Austin 2025": [
+      {
+        "time": 1764583468949,
+        "price": 6.3
+      }
+    ],
+    "Sticker | ZywOo (Holo, Champion) | Austin 2025": [
+      {
+        "time": 1764583472675,
+        "price": 2.01
+      }
+    ],
+    "Sealed Graffiti | Popdog (Dust Brown)": [
+      {
+        "time": 1764583476428,
+        "price": 0.04
+      }
+    ],
+    "Sticker | molodoy (Foil) | Austin 2025": [
+      {
+        "time": 1764583480182,
+        "price": 2.31
+      }
+    ],
+    "Sealed Graffiti | 8-Ball (Shark White)": [
+      {
+        "time": 1764583483906,
+        "price": 0.18
+      }
+    ],
+    "Desert Eagle | Printstream (Field-Tested)": [
+      {
+        "time": 1764583487634,
+        "price": 46.06
+      }
+    ],
+    "Sticker | Bolt Strike": [
+      {
+        "time": 1764583491371,
+        "price": 0.25
+      }
+    ],
+    "Sticker | Wicadia (Holo) | Austin 2025": [
+      {
+        "time": 1764583495131,
+        "price": 0.52
+      }
+    ],
+    "Sticker | FURIA (Holo) | 2020 RMR": [
+      {
+        "time": 1764583498862,
+        "price": 0.37
+      }
+    ],
+    "Sticker | Scorch Loop": [
+      {
+        "time": 1764583502578,
+        "price": 0.24
+      }
+    ],
+    "Sticker | Chompers": [
+      {
+        "time": 1764583506320,
+        "price": 0.38
+      }
+    ],
+    "SG 553 | Dragon Tech (Minimal Wear)": [
+      {
+        "time": 1764583510069,
+        "price": 1.06
+      }
+    ],
+    "Sticker | Baby Howl": [
+      {
+        "time": 1764583513804,
+        "price": 1.16
+      }
+    ],
+    "Sticker | jottAAA | Austin 2025": [
+      {
+        "time": 1764583517544,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Wicadia | Austin 2025": [
+      {
+        "time": 1764583521300,
+        "price": 0.03
+      }
+    ],
+    "Sticker | MAJ3R | Austin 2025": [
+      {
+        "time": 1764583525045,
+        "price": 0.03
+      }
+    ],
+    "Sticker | woxic | Austin 2025": [
+      {
+        "time": 1764583528792,
+        "price": 0.03
+      }
+    ],
+    "Zeus x27 | Electric Blue (Minimal Wear)": [
+      {
+        "time": 1764583532541,
+        "price": 0.36
+      }
+    ],
+    "M4A4 | Spider Lily (Field-Tested)": [
+      {
+        "time": 1764583536268,
+        "price": 17.37
+      }
+    ],
+    "Sticker | molodoy | Austin 2025": [
+      {
+        "time": 1764583540076,
+        "price": 0.27
+      }
+    ],
+    "3rd Commando Company | KSK": [
+      {
+        "time": 1764583544030,
+        "price": 15.87
+      }
+    ],
+    "MP7 | Just Smile (Field-Tested)": [
+      {
+        "time": 1764583547785,
+        "price": 0.76
+      }
+    ],
+    "Sealed Graffiti | Sheriff (Desert Amber)": [
+      {
+        "time": 1764583551514,
+        "price": 0.04
+      }
+    ],
+    "Sticker | dupreeh (Glitter) | Antwerp 2022": [
+      {
+        "time": 1764583555332,
+        "price": 0.05
+      }
+    ],
+    "Sticker | CS20 Classic (Holo)": [
+      {
+        "time": 1764583559058,
+        "price": 0.85
+      }
+    ],
+    "StatTrak™ Music Kit | Hundredth, FREE": [
+      {
+        "time": 1764583562794,
+        "price": 1.03
+      }
+    ],
+    "Charm | Lil' SAS": [
+      {
+        "time": 1764583566566,
+        "price": 0.53
+      }
+    ],
+    "Glock-18 | Shinobu (Field-Tested)": [
+      {
+        "time": 1764583570290,
+        "price": 6.44
+      }
+    ],
+    "Charm | Baby's AK": [
+      {
+        "time": 1764583574075,
+        "price": 0.38
+      }
+    ],
+    "Sealed Graffiti | Heart (Monster Purple)": [
+      {
+        "time": 1764583577812,
+        "price": 0.15
+      }
+    ],
+    "Sticker | Complexity Gaming | Paris 2023": [
+      {
+        "time": 1764583581546,
+        "price": 0.03
+      }
+    ],
+    "StatTrak™ Dual Berettas | Balance (Field-Tested)": [
+      {
+        "time": 1764583585306,
+        "price": 1.72
+      }
+    ],
+    "Glove Case": [
+      {
+        "time": 1764583589016,
+        "price": 32.24
+      }
+    ],
+    "Sealed Graffiti | Sheriff (Frog Green)": [
+      {
+        "time": 1764583592757,
+        "price": 0.06
+      }
+    ],
+    "Sticker | ZywOo | Stockholm 2021": [
+      {
+        "time": 1764583596479,
+        "price": 0.06
+      }
+    ],
+    "Shadow Case": [
+      {
+        "time": 1764583600196,
+        "price": 1.75
+      }
+    ],
+    "Falchion Case": [
+      {
+        "time": 1764583603991,
+        "price": 1.74
+      }
+    ],
+    "Operation Wildfire Case": [
+      {
+        "time": 1764583607816,
+        "price": 3.94
+      }
+    ],
+    "Sealed Graffiti | Sheriff (Cash Green)": [
+      {
+        "time": 1764583611552,
+        "price": 0.04
+      }
+    ],
+    "Sticker | zevy | Paris 2023": [
+      {
+        "time": 1764583615313,
+        "price": 0.03
+      }
+    ],
+    "Sticker | GamerLegion | Paris 2023": [
+      {
+        "time": 1764583619048,
+        "price": 0.03
+      }
+    ],
+    "StatTrak™ R8 Revolver | Crimson Web (Well-Worn)": [
+      {
+        "time": 1764583622869,
+        "price": 0.81
+      }
+    ],
+    "Sticker | dexter | Paris 2023": [
+      {
+        "time": 1764583626617,
+        "price": 0.06
+      }
+    ],
+    "AWP | Hyper Beast (Well-Worn)": [
+      {
+        "time": 1764583630361,
+        "price": 43.98
+      }
+    ],
+    "StatTrak™ Dual Berettas | Elite 1.6 (Minimal Wear)": [
+      {
+        "time": 1764583634135,
+        "price": 0.6
+      }
+    ],
+    "Prisma Case": [
+      {
+        "time": 1764583637864,
+        "price": 1.63
+      }
+    ],
+    "Sealed Graffiti | Sheriff (Tiger Orange)": [
+      {
+        "time": 1764583641598,
+        "price": 0.04
+      }
+    ],
+    "Sticker | woxic | Antwerp 2022": [
+      {
+        "time": 1764583645431,
+        "price": 0.04
+      }
+    ],
+    "Sticker | Heroic | Antwerp 2022": [
+      {
+        "time": 1764583649178,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Fnatic | Paris 2023": [
+      {
+        "time": 1764583652951,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Into The Breach (Glitter) | Paris 2023": [
+      {
+        "time": 1764583656702,
+        "price": 0.08
+      }
+    ],
+    "StatTrak™ MAC-10 | Light Box (Minimal Wear)": [
+      {
+        "time": 1764583660432,
+        "price": 0.58
+      }
+    ],
+    "AWP | Atheris (Minimal Wear)": [
+      {
+        "time": 1764583664156,
+        "price": 9.56
+      }
+    ],
+    "Sticker | Cloud9 | Shanghai 2024": [
+      {
+        "time": 1764583667885,
+        "price": 0.06
+      }
+    ],
+    "Sticker | Green's Problem": [
+      {
+        "time": 1764583671644,
+        "price": 0.27
+      }
+    ],
+    "Horizon Case": [
+      {
+        "time": 1764583675379,
+        "price": 1.91
+      }
+    ],
+    "StatTrak™ MP7 | Abyssal Apparition (Battle-Scarred)": [
+      {
+        "time": 1764583679119,
+        "price": 6.99
+      }
+    ],
+    "Shattered Web Case": [
+      {
+        "time": 1764583682854,
+        "price": 7.95
+      }
+    ],
+    "Shanghai 2024 Ancient Souvenir Package": [
+      {
+        "time": 1764583686595,
+        "price": 4.27
+      }
+    ],
+    "Sticker | ropz | Copenhagen 2024": [
+      {
+        "time": 1764583690337,
+        "price": 0.07
+      }
+    ],
+    "Sticker | Co Co Co": [
+      {
+        "time": 1764583694060,
+        "price": 0.73
+      }
+    ],
+    "Shanghai 2024 Mirage Souvenir Package": [
+      {
+        "time": 1764583697792,
+        "price": 4.1
+      }
+    ],
+    "Sticker | Cloud9 | Rio 2022": [
+      {
+        "time": 1764583701528,
+        "price": 0.04
+      }
+    ],
+    "Desert Eagle | Tilted (Minimal Wear)": [
+      {
+        "time": 1764583705265,
+        "price": 0.96
+      }
+    ],
+    "StatTrak™ Five-SeveN | Scrawl (Minimal Wear)": [
+      {
+        "time": 1764583709037,
+        "price": 0.38
+      }
+    ],
+    "CS20 Case": [
+      {
+        "time": 1764583712879,
+        "price": 1.32
+      }
+    ],
+    "Snakebite Case": [
+      {
+        "time": 1764583716598,
+        "price": 0.73
+      }
+    ],
+    "Sticker | FalleN | Antwerp 2022": [
+      {
+        "time": 1764583720356,
+        "price": 0.19
+      }
+    ],
+    "Sticker | olofmeister (Foil) | Berlin 2019": [
+      {
+        "time": 1764583724092,
+        "price": 1.21
+      }
+    ],
+    "Sticker | Eternal Fire | Copenhagen 2024": [
+      {
+        "time": 1764583727843,
+        "price": 0.14
+      }
+    ],
+    "Sticker | FalleN | Copenhagen 2024": [
+      {
+        "time": 1764583731562,
+        "price": 0.3
+      }
+    ],
+    "Sticker | MAJ3R (Glitter) | Copenhagen 2024": [
+      {
+        "time": 1764583735296,
+        "price": 0.14
+      }
+    ],
+    "Spectrum Case": [
+      {
+        "time": 1764583739056,
+        "price": 4.92
+      }
+    ],
+    "StatTrak™ P90 | Grim (Field-Tested)": [
+      {
+        "time": 1764583742784,
+        "price": 0.3
+      }
+    ],
+    "Clutch Case": [
+      {
+        "time": 1764583746526,
+        "price": 0.97
+      }
+    ],
+    "Sticker | jL (Champion) | Copenhagen 2024": [
+      {
+        "time": 1764583750328,
+        "price": 0.03
+      }
+    ],
+    "Prisma 2 Case": [
+      {
+        "time": 1764583754071,
+        "price": 1.66
+      }
+    ],
+    "Souvenir XM1014 | Ancient Lore (Minimal Wear)": [
+      {
+        "time": 1764583757825,
+        "price": 4.4
+      }
+    ],
+    "Sticker | Wicadia | Copenhagen 2024": [
+      {
+        "time": 1764583761567,
+        "price": 0.03
+      }
+    ],
+    "Sticker | woxic (Glitter) | Copenhagen 2024": [
+      {
+        "time": 1764583765326,
+        "price": 0.16
+      }
+    ],
+    "Sticker | MAJ3R | Copenhagen 2024": [
+      {
+        "time": 1764583769053,
+        "price": 0.03
+      }
+    ],
+    "Sticker | XANTARES | Copenhagen 2024": [
+      {
+        "time": 1764583772796,
+        "price": 0.19
+      }
+    ],
+    "Sticker | Calyx | Copenhagen 2024": [
+      {
+        "time": 1764583776597,
+        "price": 0.03
+      }
+    ],
+    "Copenhagen 2024 Overpass Souvenir Package": [
+      {
+        "time": 1764583780325,
+        "price": 2.73
+      }
+    ],
+    "Copenhagen 2024 Inferno Souvenir Package": [
+      {
+        "time": 1764583784051,
+        "price": 2.9
+      }
+    ],
+    "Sticker | Perfecto (Glitter) | Paris 2023": [
+      {
+        "time": 1764583787793,
+        "price": 0.05
+      }
+    ],
+    "Sticker | Perfecto (Glitter) | Antwerp 2022": [
+      {
+        "time": 1764583791521,
+        "price": 0.06
+      }
+    ],
+    "Sticker | Perfecto | Antwerp 2022": [
+      {
+        "time": 1764583795255,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Perfecto | Stockholm 2021": [
+      {
+        "time": 1764583799019,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Perfecto | Paris 2023": [
+      {
+        "time": 1764583802773,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Grayhound Gaming | Rio 2022": [
+      {
+        "time": 1764583806507,
+        "price": 0.03
+      }
+    ],
+    "Anubis Collection Package": [
+      {
+        "time": 1764583810283,
+        "price": 1.89
+      }
+    ],
+    "Sticker | Baited (Holo)": [
+      {
+        "time": 1764583814138,
+        "price": 1.22
+      }
+    ],
+    "SSG 08 | Fever Dream (Factory New)": [
+      {
+        "time": 1764583817898,
+        "price": 4.87
+      }
+    ],
+    "Jungle Rebel | Elite Crew": [
+      {
+        "time": 1764583821626,
+        "price": 37.97
+      }
+    ],
+    "Sticker | Dessert Eagle": [
+      {
+        "time": 1764583825367,
+        "price": 0.19
+      }
+    ],
+    "FAMAS | ZX Spectron (Well-Worn)": [
+      {
+        "time": 1764583829143,
+        "price": 3.81
+      }
+    ],
+    "USP-S | Blueprint (Minimal Wear)": [
+      {
+        "time": 1764583832875,
+        "price": 13.41
+      }
+    ],
+    "Sticker | imoRR (Glitter) | Antwerp 2022": [
+      {
+        "time": 1764583836606,
+        "price": 0.11
+      }
+    ],
+    "Seal Team 6 Soldier | NSWC SEAL": [
+      {
+        "time": 1764583840360,
+        "price": 14.23
+      }
+    ],
+    "Sticker | Operation Riptide": [
+      {
+        "time": 1764583844224,
+        "price": 0.5
+      }
+    ],
+    "Music Kit | Sarah Schachner, KOLIBRI": [
+      {
+        "time": 1764583847960,
+        "price": 6.63
+      }
+    ],
+    "Sticker | XANTARES | Antwerp 2022": [
+      {
+        "time": 1764583851698,
+        "price": 0.27
+      }
+    ],
+    "Sticker | Eternal Fire | Antwerp 2022": [
+      {
+        "time": 1764583855416,
+        "price": 0.16
+      }
+    ],
+    "Sticker | Ninjas in Pyjamas | Paris 2023": [
+      {
+        "time": 1764583859213,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Vitality | Paris 2023": [
+      {
+        "time": 1764583862954,
+        "price": 0.03
+      }
+    ],
+    "Sticker | biguzera | Paris 2023": [
+      {
+        "time": 1764583866714,
+        "price": 0.03
+      }
+    ],
+    "Sticker | BLAST.tv | Paris 2023": [
+      {
+        "time": 1764583870475,
+        "price": 0.03
+      }
+    ],
+    "Sticker | hardzao | Paris 2023": [
+      {
+        "time": 1764583874250,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Monte | Paris 2023": [
+      {
+        "time": 1764583877985,
+        "price": 0.03
+      }
+    ],
+    "Sticker | cadiaN | Paris 2023": [
+      {
+        "time": 1764583881754,
+        "price": 0.03
+      }
+    ],
+    "Sticker | ENCE | Paris 2023": [
+      {
+        "time": 1764583885505,
+        "price": 0.03
+      }
+    ],
+    "Sticker | zevy (Glitter) | Paris 2023": [
+      {
+        "time": 1764583889254,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Keoz | Paris 2023": [
+      {
+        "time": 1764583892995,
+        "price": 0.03
+      }
+    ],
+    "Sticker | OG (Glitter) | Paris 2023": [
+      {
+        "time": 1764583896726,
+        "price": 0.06
+      }
+    ],
+    "Sticker | G2 Esports | Paris 2023": [
+      {
+        "time": 1764583900457,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Apeks (Glitter) | Paris 2023": [
+      {
+        "time": 1764583904214,
+        "price": 0.15
+      }
+    ],
+    "Sticker | Natus Vincere | Paris 2023": [
+      {
+        "time": 1764583907953,
+        "price": 0.05
+      }
+    ],
+    "Sticker | 9INE | Paris 2023": [
+      {
+        "time": 1764583911686,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Fnatic (Glitter) | Paris 2023": [
+      {
+        "time": 1764583915424,
+        "price": 0.09
+      }
+    ],
+    "Sticker | Complexity Gaming | Antwerp 2022": [
+      {
+        "time": 1764583919190,
+        "price": 0.05
+      }
+    ],
+    "Sticker | Vitality | Rio 2022": [
+      {
+        "time": 1764583922924,
+        "price": 0.03
+      }
+    ],
+    "Sticker | IHC Esports | Rio 2022": [
+      {
+        "time": 1764583926668,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Team Spirit (Glitter) | Antwerp 2022": [
+      {
+        "time": 1764583930416,
+        "price": 0.73
+      }
+    ],
+    "Sticker | BIG | Rio 2022": [
+      {
+        "time": 1764583934178,
+        "price": 0.03
+      }
+    ],
+    "Sticker | IEM | Rio 2022": [
+      {
+        "time": 1764583937915,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Team Liquid | Rio 2022": [
+      {
+        "time": 1764583941676,
+        "price": 0.03
+      }
+    ],
+    "Sticker | ENCE | Rio 2022": [
+      {
+        "time": 1764583945404,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Heroic | 2020 RMR": [
+      {
+        "time": 1764583949150,
+        "price": 0.04
+      }
+    ],
+    "StatTrak™ PP-Bizon | Runic (Field-Tested)": [
+      {
+        "time": 1764583952887,
+        "price": 0.15
+      }
+    ],
+    "AWP | Capillary (Field-Tested)": [
+      {
+        "time": 1764583956609,
+        "price": 0.61
+      }
+    ],
+    "Sticker | Heroic (Holo) | 2020 RMR": [
+      {
+        "time": 1764583960340,
+        "price": 0.15
+      }
+    ],
+    "Sticker | North | 2020 RMR": [
+      {
+        "time": 1764583964080,
+        "price": 0.05
+      }
+    ],
+    "Sticker | OG | 2020 RMR": [
+      {
+        "time": 1764583967822,
+        "price": 0.03
+      }
+    ],
+    "Sticker | Vitality | 2020 RMR": [
+      {
+        "time": 1764583971575,
+        "price": 0.03
+      }
+    ]
+  }
 }

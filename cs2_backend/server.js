@@ -61,7 +61,19 @@ async function fetchInventory(steamId) {
             `https://steamcommunity.com/inventory/${steamId}/${appId}/${contextId}` +
             `?l=english&count=200${startAssetId ? "&start_assetid=" + startAssetId : ""}`;
 
-        const response = await axios.get(url);
+        let response;
+        let attempts = 0;
+        while (attempts < 3) {
+            try {
+                response = await axios.get(url);
+                break;
+            } catch (err) {
+                attempts++;
+                console.log(`Fetch attempt ${attempts} failed: ${err.message}`);
+                if (attempts >= 3) throw err;
+                await delay(2000);
+            }
+        }
         const data = response.data;
 
         if (!data || !data.assets) {
@@ -202,6 +214,27 @@ async function processQueue() {
 
     isProcessing = false;
     console.log("Queue processing finished.");
+
+    // 🔥 Update History for all cached users
+    console.log("Updating total value history for cached users...");
+    for (const steamId of Object.keys(inventoryCache)) {
+        try {
+            const items = await fetchInventory(steamId);
+            let totalValue = 0;
+            for (const item of items) {
+                const priceEntry = priceDatabase[item.name];
+                if (priceEntry) {
+                    totalValue += priceEntry.price;
+                }
+            }
+            if (totalValue > 0) {
+                console.log(`Recording history for ${steamId}: $${totalValue}`);
+                addTotalValueHistory(totalValue, true); // Force update
+            }
+        } catch (e) {
+            console.error(`Failed to update history for ${steamId}`, e);
+        }
+    }
 }
 
 // -------------------- PORTFOLIO SYSTEM --------------------
@@ -297,12 +330,12 @@ function addItemHistory(marketName, price) {
 }
 
 // Helper to add total value history
-function addTotalValueHistory(value) {
-    // Limit to 1 entry per hour to avoid spam
+function addTotalValueHistory(value, force = false) {
+    // Limit to 1 entry per hour to avoid spam, unless forced
     const lastEntry = historyDatabase.total_value[historyDatabase.total_value.length - 1];
     const now = Date.now();
-    if (lastEntry && (now - lastEntry.time < 1000 * 60 * 60)) {
-        return; // Skip if less than 1 hour passed
+    if (!force && lastEntry && (now - lastEntry.time < 1000 * 60 * 5)) {
+        return; // Skip if less than 5 mins passed and not forced
     }
     historyDatabase.total_value.push({ time: now, value: value });
     saveHistoryDatabase();
@@ -400,9 +433,10 @@ app.get("/inventory/:steamid/priced", async (req, res) => {
         }
 
         // 🔥 Record Total Value History (if not 0)
-        if (totalValue > 0) {
-            addTotalValueHistory(totalValue);
-        }
+        // REMOVED: Only record when prices are updated via queue
+        // if (totalValue > 0) {
+        //     addTotalValueHistory(totalValue);
+        // }
 
         res.json({
             success: true,

@@ -53,11 +53,11 @@ class PortfolioChart extends StatelessWidget {
         lineBarsData: [
           LineChartBarData(
             spots: points,
-            isCurved: true,
+            isCurved: false,
             color: isItemHistory ? Colors.orangeAccent : Colors.greenAccent,
             barWidth: 3,
             isStrokeCapRound: true,
-            dotData: const FlDotData(show: false),
+            dotData: FlDotData(show: points.length < 2),
             belowBarData: BarAreaData(
               show: true,
               color: (isItemHistory ? Colors.orangeAccent : Colors.greenAccent).withOpacity(0.2),

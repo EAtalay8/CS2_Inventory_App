@@ -22,7 +22,7 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
   if (customProfit != null && customProfitPercent != null) {
     profitLoss = customProfit;
     profitPercent = customProfitPercent;
-    profitColor = profitLoss! >= 0 ? Colors.green : Colors.red;
+    profitColor = profitLoss >= 0 ? Colors.green : Colors.red;
   } else if (item.price != null && item.purchasePrice != null && item.purchasePrice! > 0) {
     profitLoss = item.price! - item.purchasePrice!;
     profitPercent = (profitLoss / item.purchasePrice!) * 100;
@@ -32,10 +32,10 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
   // Helper to format profit text
   String getProfitText() {
     if (profitLoss == null || profitPercent == null) return "";
-    String text = "${profitLoss! >= 0 ? '+' : ''}\$${profitLoss!.toStringAsFixed(2)} (${profitPercent!.toStringAsFixed(0)}%)";
+    String text = "${profitLoss >= 0 ? '+' : ''}\$${profitLoss.toStringAsFixed(2)} (${profitPercent.toStringAsFixed(0)}%)";
     
     // If this is a group and we have partial tracking info
-    if (isGroup && count > 1 && trackedCount != null && trackedCount! < count) {
+    if (isGroup && count > 1 && trackedCount != null && trackedCount < count) {
       text += " [$trackedCount/$count]";
     }
     return text;
@@ -188,7 +188,8 @@ enum SortOption {
 }
 
 class InventoryPage extends StatefulWidget {
-  const InventoryPage({super.key});
+  final String steamId;
+  const InventoryPage({super.key, required this.steamId});
 
   @override
   State<InventoryPage> createState() => _InventoryPageState();
@@ -209,7 +210,7 @@ class _InventoryPageState extends State<InventoryPage> {
 
   Future<void> loadInventory() async {
     final service = InventoryService();
-    final result = await service.fetchInventory("76561198253002919");
+    final result = await service.fetchInventory(widget.steamId);
 
     // Group items by name
     final Map<String, List<InventoryItem>> groups = {};

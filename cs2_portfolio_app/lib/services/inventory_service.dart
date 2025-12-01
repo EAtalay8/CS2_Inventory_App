@@ -9,6 +9,7 @@ class InventoryResult {
   final double totalPurchaseValue;
   final double totalValueForProfitCalc;
   final DateTime? lastPriceRefresh;
+  final String? error; // 🔥 Added error field
 
   InventoryResult({
     required this.items,
@@ -16,6 +17,7 @@ class InventoryResult {
     required this.totalPurchaseValue,
     required this.totalValueForProfitCalc,
     this.lastPriceRefresh,
+    this.error,
   });
 }
 
@@ -51,13 +53,34 @@ class InventoryService {
             totalValueForProfitCalc: totalValueForProfitCalc,
             lastPriceRefresh: lastPriceRefresh,
           );
+        } else {
+             return InventoryResult(
+                items: [], 
+                totalValue: 0, 
+                totalPurchaseValue: 0, 
+                totalValueForProfitCalc: 0,
+                error: body["error"] ?? "Unknown backend error"
+            );
         }
+      } else {
+          return InventoryResult(
+            items: [], 
+            totalValue: 0, 
+            totalPurchaseValue: 0, 
+            totalValueForProfitCalc: 0,
+            error: "Server error: ${res.statusCode}"
+        );
       }
     } catch (e) {
       print("Error fetching inventory: $e");
+      return InventoryResult(
+        items: [], 
+        totalValue: 0.0, 
+        totalPurchaseValue: 0.0, 
+        totalValueForProfitCalc: 0.0,
+        error: "Connection failed: $e"
+      );
     }
-
-    return InventoryResult(items: [], totalValue: 0.0, totalPurchaseValue: 0.0, totalValueForProfitCalc: 0.0);
   }
 
   Future<bool> savePurchasePrice(String assetId, double? price) async {

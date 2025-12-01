@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'models/inventory_item.dart';
 import 'services/inventory_service.dart';
 
@@ -18,7 +19,15 @@ class _MarketPageState extends State<MarketPage> {
   @override
   void initState() {
     super.initState();
+    _loadFilterPreference();
     loadData();
+  }
+
+  Future<void> _loadFilterPreference() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      minPriceFilter = prefs.getDouble('minPriceFilter') ?? 0.50;
+    });
   }
 
   Future<void> loadData() async {
@@ -100,11 +109,13 @@ class _MarketPageState extends State<MarketPage> {
                   max: 10.0,
                   divisions: 20,
                   label: "\$${minPriceFilter.toStringAsFixed(2)}",
-                  onChanged: (val) {
+                  onChanged: (val) async {
                     setState(() {
                       minPriceFilter = val;
                     });
                     _applyFilter();
+                    final prefs = await SharedPreferences.getInstance();
+                    await prefs.setDouble('minPriceFilter', val);
                   },
                 ),
                 const Text(
