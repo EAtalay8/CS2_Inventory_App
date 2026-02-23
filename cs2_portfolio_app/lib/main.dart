@@ -6,6 +6,7 @@ import 'services/inventory_service.dart';
 import 'widgets/portfolio_chart.dart';
 import 'login_page.dart';
 import 'models/inventory_item.dart';
+import 'item_detail_page.dart';
 
 import 'services/background_service.dart';
 
@@ -159,24 +160,36 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildTopMovers() {
-    // Filter items with price and previousPrice (Market Logic)
-    // AND apply minPriceFilter
+    // Filter items with price and previousPrice
     final marketItems = items.where((i) => 
       i.price != null && 
       i.previousPrice != null && 
       i.previousPrice! > 0 &&
-      i.price! >= minPriceFilter // 🔥 Apply filter
+      i.price! >= minPriceFilter
     ).toList();
 
     if (marketItems.isEmpty) return const SizedBox.shrink();
 
-    marketItems.sort((a, b) {
-      final changeA = (a.price! - a.previousPrice!) / a.previousPrice!;
-      final changeB = (b.price! - b.previousPrice!) / b.previousPrice!;
-      return changeB.compareTo(changeA); // Descending (Highest gain first)
+    // Group by classid (identical items)
+    Map<String, List<InventoryItem>> groups = {};
+    for (var item in marketItems) {
+      if (!groups.containsKey(item.classid)) {
+        groups[item.classid] = [];
+      }
+      groups[item.classid]!.add(item);
+    }
+
+    // Sort groups by % change (descending)
+    final sortedGroups = groups.values.toList();
+    sortedGroups.sort((a, b) {
+      final itemA = a.first;
+      final itemB = b.first;
+      final changeA = (itemA.price! - itemA.previousPrice!) / itemA.previousPrice!;
+      final changeB = (itemB.price! - itemB.previousPrice!) / itemB.previousPrice!;
+      return changeB.compareTo(changeA);
     });
 
-    final top3 = marketItems.take(3).toList();
+    final top3 = sortedGroups.take(3).toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -192,45 +205,78 @@ class _HomePageState extends State<HomePage> {
             scrollDirection: Axis.horizontal,
             itemCount: top3.length,
             itemBuilder: (context, index) {
-              final item = top3[index];
+              final group = top3[index];
+              final item = group.first;
+              final int count = group.length;
               final change = item.price! - item.previousPrice!;
               final percent = (change / item.previousPrice!) * 100;
               final isPositive = change >= 0;
 
-              return Container(
-                width: 100,
-                margin: const EdgeInsets.only(right: 12),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white10,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: isPositive ? Colors.greenAccent.withOpacity(0.3) : Colors.redAccent.withOpacity(0.3)
+              return GestureDetector(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ItemDetailPage(item: item),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: 100,
+                  margin: const EdgeInsets.only(right: 12),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white10,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: isPositive ? Colors.greenAccent.withOpacity(0.3) : Colors.redAccent.withOpacity(0.3)
+                    ),
                   ),
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    item.icon.isNotEmpty
-                        ? Image.network(item.icon, height: 40)
-                        : const Icon(Icons.image, size: 40),
-                    const SizedBox(height: 8),
-                    Text(
-                      item.name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: 10),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      "${isPositive ? '+' : ''}${percent.toStringAsFixed(2)}%",
-                      style: TextStyle(
-                        color: isPositive ? Colors.greenAccent : Colors.redAccent,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          item.icon.isNotEmpty
+                              ? Image.network(item.icon, height: 40)
+                              : const Icon(Icons.image, size: 40),
+                          if (count > 1)
+                            Positioned(
+                              top: -4,
+                              right: -8,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.blueAccent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(
+                                  "x$count",
+                                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      Text(
+                        item.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 10),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        "${isPositive ? '+' : ''}${percent.toStringAsFixed(2)}%",
+                        style: TextStyle(
+                          color: isPositive ? Colors.greenAccent : Colors.redAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               );
             },

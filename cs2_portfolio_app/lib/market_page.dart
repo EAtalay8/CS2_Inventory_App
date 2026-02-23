@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models/inventory_item.dart';
 import 'services/inventory_service.dart';
+import 'item_detail_page.dart';
 
 class MarketPage extends StatefulWidget {
   const MarketPage({super.key});
@@ -232,9 +233,12 @@ class _MarketPageState extends State<MarketPage> {
                               ],
                             ),
                             onTap: () {
-                              // Navigate to detail of the first item (or maybe a list of items?)
-                              // For now, just first item as they are identical
-                              // TODO: Maybe show a bottom sheet with all items in stack?
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ItemDetailPage(item: item),
+                                ),
+                              );
                             },
                           ),
                         );

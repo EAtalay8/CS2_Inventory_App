@@ -1,12 +1,12 @@
 # CS2 Portfolio App — Roadmap & Sorun Takibi
-*Son Güncelleme: 2026-02-13*
+*Son Güncelleme: 2026-02-23*
 
 ---
 
 ## 🔴 Aktif Sorunlar (Bugs)
 
 ### 1. WiFi'de Rate Limit Hatası
-**Durum:** Sorun devam ediyor
+**Durum:** ✅ Fix uygulandı (23 Feb 2026) — WiFi testi bekleniyor
 **Belirtiler:**
 - WiFi üzerinden "Update Prices" butonuna basılınca Exception/404/Rate Limit hatası.
 - 3 gün beklenmiş olsa bile hata devam ediyor.
@@ -19,10 +19,10 @@
 - İstekler arasında 3.5 saniye bekleniyor ama ~285 item için bu toplamda ~16 dakika demek. Bu süre boyunca aynı IP'den sürekli istek gitmesi Steam'i tetikliyor olabilir.
 
 **Çözüm Önerileri:**
-- [ ] `_fetchAndSavePrice()`'a browser-benzeri header'lar eklenmeli
-- [ ] İstek aralığını 3.5s → 4-5s'ye çıkarmayı denemek
-- [ ] Rate limit hatası alındığında retry + exponential backoff uygulamak
-- [ ] Hata alındığında mevcut fiyat verilerini korumak (şu an envanter 0'lanıyor)
+- [x] `_fetchAndSavePrice()`'a browser-benzeri header'lar eklendi
+- [x] Adaptive delay eklendi (başarı: 3.5s, hata: 5s, 3+ hata: 15s)
+- [x] Rate limit hatası alındığında retry + exponential backoff uygulandı (429 → 10s/20s/30s)
+- [x] Hata alındığında cache'deki veriler korunuyor (envanter artık 0'lanmıyor)
 
 ---
 
@@ -48,11 +48,11 @@
 - [ ] Sayfa açıldığında son tercih yüklenmeli
 - [ ] App kapatılıp açılsa bile tercih korunmalı
 
-#### 1.4 Market & Top Movers: Item Detail Navigasyonu
+#### 1.4 Market & Top Movers: Item Detail Navigasyonu ✅
 **Dosyalar:** `market_page.dart`, `main.dart`
-- [ ] Market sayfasındaki itemlere tıklanınca `ItemDetailPage`'e gitmeli
-- [ ] Ana sayfadaki Top Movers kartlarına tıklanınca `ItemDetailPage`'e gitmeli
-- Market sayfasında `onTap` şu an boş (TODO var)
+- [x] Market sayfasındaki itemlere tıklanınca `ItemDetailPage`'e gidiyor
+- [x] Ana sayfadaki Top Movers kartlarına tıklanınca `ItemDetailPage`'e gidiyor
+- ~~Market sayfasında `onTap` şu an boş (TODO var)~~ → Tamamlandı (23 Feb 2026)
 
 ---
 
