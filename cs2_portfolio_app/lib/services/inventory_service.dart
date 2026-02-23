@@ -528,4 +528,47 @@ class InventoryService {
     await _loadLocalData();
     return List<Map<String, dynamic>>.from(_history["items"]?[marketName] ?? []);
   }
+
+  /// Returns a map of {itemName: price} for the price closest to [targetTime] for all items.
+  /// Used by the market page time range filter (1 day, 1 week, 1 month).
+  Future<Map<String, double?>> getPricesAtTimeForAll(DateTime targetTime) async {
+    await _loadLocalData();
+    final Map<String, double?> result = {};
+    final int targetMs = targetTime.millisecondsSinceEpoch;
+
+    final items = _history["items"] as Map<String, dynamic>? ?? {};
+    for (var entry in items.entries) {
+      final String itemName = entry.key;
+      final List<dynamic> historyList = entry.value as List<dynamic>? ?? [];
+
+      if (historyList.isEmpty) {
+        result[itemName] = null;
+        continue;
+      }
+
+      // Find the entry closest to targetTime (but not after it)
+      Map<String, dynamic>? best;
+      int bestDiff = 999999999999;
+
+      for (var h in historyList) {
+        final int t = h["time"] as int;
+        if (t <= targetMs) {
+          final diff = targetMs - t;
+          if (diff < bestDiff) {
+            bestDiff = diff;
+            best = h as Map<String, dynamic>;
+          }
+        }
+      }
+
+      // If no entry before target, take the earliest available
+      if (best == null && historyList.isNotEmpty) {
+        best = historyList.first as Map<String, dynamic>;
+      }
+
+      result[itemName] = best != null ? (best["price"] as num?)?.toDouble() : null;
+    }
+
+    return result;
+  }
 }

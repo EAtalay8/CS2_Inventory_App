@@ -67,12 +67,12 @@
   - 3. parti API kullanımı (CSFloat, PriceEmpire vb. — tek istekte çoklu fiyat)
 - Detaylı analiz: bkz. **Analiz A — Steam Market'ten Direkt Fiyat Çekme**
 
-#### 2.2 Market Sayfası: Zaman Aralığı Filtresi
+#### 2.2 Market Sayfası: Zaman Aralığı Filtresi ✅
 **Dosya:** `market_page.dart`, `inventory_service.dart`
-- [ ] 1 Gün / 1 Hafta / 1 Ay seçenekleri (SegmentedButton veya ToggleButtons)
-- [ ] Seçilen aralığa göre fiyat değişimi hesaplanmalı
-- [ ] Bu özellik için `history.json`'daki item bazlı fiyat geçmişi kullanılacak
-- Not: Yeterli geçmiş veri birikmiş olmalı (1 hafta için en az 7 günlük data)
+- [x] 1 Gün / 1 Hafta / 1 Ay seçenekleri (SegmentedButton)
+- [x] Seçilen aralığa göre fiyat değişimi hesaplanıyor
+- [x] `history.json`'daki item bazlı fiyat geçmişi kullanılıyor
+- Not: Tamamlandı (23 Feb 2026)
 
 ---
 

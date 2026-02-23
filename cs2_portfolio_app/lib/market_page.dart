@@ -11,12 +11,16 @@ class MarketPage extends StatefulWidget {
   State<MarketPage> createState() => _MarketPageState();
 }
 
+enum MarketRange { day, week, month, threeMonths }
+
 class _MarketPageState extends State<MarketPage> {
   List<InventoryItem> allItems = []; 
   List<List<InventoryItem>> filteredGroups = []; // 🔥 Store groups of items
   double minPriceFilter = 0.50; 
   bool loading = true; 
-
+  
+  MarketRange selectedRange = MarketRange.day;
+  Map<String, double?> historicPrices = {}; // Price at the start of the selected range
   @override
   void initState() {
     super.initState();
@@ -40,8 +44,23 @@ class _MarketPageState extends State<MarketPage> {
     final service = InventoryService();
     final result = await service.fetchInventory(steamId);
     
+    // Load historical prices if needed
+    if (selectedRange != MarketRange.day) {
+      DateTime target;
+      if (selectedRange == MarketRange.week) {
+        target = DateTime.now().subtract(const Duration(days: 7));
+      } else if (selectedRange == MarketRange.month) {
+        target = DateTime.now().subtract(const Duration(days: 30));
+      } else {
+        target = DateTime.now().subtract(const Duration(days: 90));
+      }
+      historicPrices = await service.getPricesAtTimeForAll(target);
+    } else {
+      historicPrices = {};
+    }
+
     if (mounted) {
-      allItems = result.items.where((i) => i.price != null && i.previousPrice != null).toList();
+      allItems = result.items.where((i) => i.price != null).toList();
       _applyFilter(); 
       setState(() {
         loading = false;
@@ -79,8 +98,15 @@ class _MarketPageState extends State<MarketPage> {
         final itemA = a.first;
         final itemB = b.first;
 
-        double changeA = (itemA.price! - itemA.previousPrice!) / itemA.previousPrice!;
-        double changeB = (itemB.price! - itemB.previousPrice!) / itemB.previousPrice!;
+        double basePriceA = selectedRange == MarketRange.day 
+            ? (itemA.previousPrice ?? itemA.price!) 
+            : (historicPrices[itemA.name] ?? itemA.price!);
+        double basePriceB = selectedRange == MarketRange.day 
+            ? (itemB.previousPrice ?? itemB.price!) 
+            : (historicPrices[itemB.name] ?? itemB.price!);
+
+        double changeA = (itemA.price! - basePriceA) / (basePriceA > 0 ? basePriceA : 1);
+        double changeB = (itemB.price! - basePriceB) / (basePriceB > 0 ? basePriceB : 1);
         
         return changeB.compareTo(changeA);
       });
@@ -96,12 +122,29 @@ class _MarketPageState extends State<MarketPage> {
       ),
       body: Column(
         children: [
-          // 🔥 FILTER SLIDER
+          // 🔥 RANGE & FILTER SECTION
           Container(
             padding: const EdgeInsets.all(16),
             color: Colors.black12,
             child: Column(
               children: [
+                SegmentedButton<MarketRange>(
+                  segments: const [
+                    ButtonSegment(value: MarketRange.day, label: Text("1D"), tooltip: "24-hour Change"),
+                    ButtonSegment(value: MarketRange.week, label: Text("1W"), tooltip: "7-day Change"),
+                    ButtonSegment(value: MarketRange.month, label: Text("1M"), tooltip: "30-day Change"),
+                    ButtonSegment(value: MarketRange.threeMonths, label: Text("3M"), tooltip: "90-day Change"),
+                  ],
+                  selected: {selectedRange},
+                  onSelectionChanged: (Set<MarketRange> newSelection) {
+                    setState(() {
+                      selectedRange = newSelection.first;
+                      loading = true;
+                    });
+                    loadData();
+                  },
+                ),
+                const SizedBox(height: 16),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -152,9 +195,13 @@ class _MarketPageState extends State<MarketPage> {
                         final int count = group.length;
 
                         // Calculate totals for the group
-                        final double singleChange = item.price! - item.previousPrice!;
+                        double basePrice = selectedRange == MarketRange.day 
+                            ? (item.previousPrice ?? item.price!) 
+                            : (historicPrices[item.name] ?? item.price!);
+
+                        final double singleChange = item.price! - basePrice;
                         final double totalChange = singleChange * count;
-                        final double percent = (singleChange / item.previousPrice!) * 100;
+                        final double percent = basePrice > 0 ? (singleChange / basePrice) * 100 : 0;
                         final Color color = singleChange >= 0 ? Colors.greenAccent : Colors.redAccent;
                         
                         final bool isAnyWatched = group.any((i) => i.isWatched);
@@ -208,7 +255,9 @@ class _MarketPageState extends State<MarketPage> {
                               ],
                             ),
                             subtitle: Text(
-                              "Prev: \$${item.previousPrice!.toStringAsFixed(2)} -> Now: \$${item.price!.toStringAsFixed(2)}",
+                              selectedRange == MarketRange.day
+                                ? "Prev: \$${(item.previousPrice ?? item.price!).toStringAsFixed(2)} -> Now: \$${item.price!.toStringAsFixed(2)}"
+                                : "Start: \$${(historicPrices[item.name] ?? item.price!).toStringAsFixed(2)} -> Now: \$${item.price!.toStringAsFixed(2)}",
                               style: const TextStyle(color: Colors.grey, fontSize: 12),
                             ),
                             trailing: Column(
