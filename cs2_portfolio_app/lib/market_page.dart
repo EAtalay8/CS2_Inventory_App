@@ -31,8 +31,13 @@ class _MarketPageState extends State<MarketPage> {
   }
 
   Future<void> loadData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? steamId = prefs.getString('steamId');
+    
+    if (steamId == null) return;
+
     final service = InventoryService();
-    final result = await service.fetchInventory("76561198253002919");
+    final result = await service.fetchInventory(steamId);
     
     if (mounted) {
       allItems = result.items.where((i) => i.price != null && i.previousPrice != null).toList();

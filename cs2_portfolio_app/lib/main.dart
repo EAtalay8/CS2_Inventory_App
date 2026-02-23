@@ -7,8 +7,12 @@ import 'widgets/portfolio_chart.dart';
 import 'login_page.dart';
 import 'models/inventory_item.dart';
 
+import 'services/background_service.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await BackgroundService.initializeService(); // Initialize Service
+  
   final prefs = await SharedPreferences.getInstance();
   final String? steamId = prefs.getString('steamId');
 
@@ -52,10 +56,21 @@ class _HomePageState extends State<HomePage> {
   String? steamId;
   double minPriceFilter = 0.50; // Default, will be updated from prefs
 
+  String updateProgress = ""; // Store "5/285"
+
   @override
   void initState() {
     super.initState();
     _loadSteamId();
+    
+    // Listen to progress updates
+    InventoryService().progressStream.listen((progress) {
+      if (mounted) {
+        setState(() {
+          updateProgress = progress;
+        });
+      }
+    });
   }
 
   Future<void> _loadSteamId() async {
@@ -77,39 +92,68 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<void> loadTotalValue({bool forceUpdate = false}) async {
+  Future<void> loadTotalValue({bool forceUpdate = false, bool showLoading = true}) async {
     if (steamId == null) return;
 
-    setState(() {
-      loading = true;
-    });
+    if (showLoading) {
+      setState(() {
+        loading = true;
+      });
+    }
 
     final service = InventoryService();
-    final result = await service.fetchInventory(steamId!, forceUpdate: forceUpdate);
-    final historyData = await service.fetchTotalHistory();
+    
+    if (forceUpdate) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Background price update started. This may take a while..."),
+          backgroundColor: Colors.blueAccent,
+          duration: Duration(seconds: 3),
+        ),
+      );
+    }
 
-    if (mounted) {
-      setState(() {
-        items = result.items; // 🔥 Save items
-        totalValue = result.totalValue;
-        totalPurchaseValue = result.totalPurchaseValue;
-        totalValueForProfitCalc = result.totalValueForProfitCalc;
-        lastRefreshTime = DateTime.now();
-        if (result.lastPriceRefresh != null) {
-          lastPriceRefresh = result.lastPriceRefresh;
+    try {
+      final result = await service.fetchInventory(steamId!, forceUpdate: forceUpdate);
+      final historyData = await service.fetchTotalHistory();
+
+      if (mounted) {
+        setState(() {
+          items = result.items;
+          totalValue = result.totalValue;
+          totalPurchaseValue = result.totalPurchaseValue;
+          totalValueForProfitCalc = result.totalValueForProfitCalc;
+          lastRefreshTime = DateTime.now();
+          if (result.lastPriceRefresh != null) {
+            lastPriceRefresh = result.lastPriceRefresh;
+          }
+          history = historyData;
+        });
+
+        if (result.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.error!), 
+              backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 5),
+            ),
+          );
         }
-        history = historyData;
-        loading = false;
-      });
-
-      if (result.error != null) {
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(result.error!), 
+            content: Text("Error: $e"), 
             backgroundColor: Colors.redAccent,
-            duration: const Duration(seconds: 5),
           ),
         );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
       }
     }
   }
@@ -350,15 +394,15 @@ class _HomePageState extends State<HomePage> {
                   onPressed: canUpdatePrices 
                     ? () => loadTotalValue(forceUpdate: true) 
                     : null,
+                ),
               ),
-            ),
-              if (lastPriceRefresh != null)
+              if (updateProgress.isNotEmpty)
                 Padding(
                   padding: const EdgeInsets.only(top: 8.0),
                   child: Center(
                     child: Text(
-                      "Prices Last Updated: ${lastPriceRefresh!.toLocal().toString().split('.')[0]}",
-                      style: const TextStyle(color: Colors.grey, fontSize: 12),
+                      "Updating Prices: $updateProgress",
+                      style: const TextStyle(color: Colors.orangeAccent, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
@@ -383,9 +427,8 @@ class _HomePageState extends State<HomePage> {
                               builder: (context) => InventoryPage(steamId: steamId!),
                             ),
                           ).then((_) {
-                            // Refresh when returning from inventory page
-                            setState(() { loading = true; });
-                            loadTotalValue();
+                            // Refresh when returning from inventory page (Background update)
+                            loadTotalValue(showLoading: false);
                           });
                         }
                       },

@@ -210,23 +210,49 @@ class _InventoryPageState extends State<InventoryPage> {
 
   Future<void> loadInventory() async {
     final service = InventoryService();
-    final result = await service.fetchInventory(widget.steamId);
+    try {
+      final result = await service.fetchInventory(widget.steamId);
 
-    // Group items by name
-    final Map<String, List<InventoryItem>> groups = {};
-    for (var item in result.items) {
-      if (!groups.containsKey(item.name)) {
-        groups[item.name] = [];
+      // Group items by name
+      final Map<String, List<InventoryItem>> groups = {};
+      for (var item in result.items) {
+        if (!groups.containsKey(item.name)) {
+          groups[item.name] = [];
+        }
+        groups[item.name]!.add(item);
       }
-      groups[item.name]!.add(item);
-    }
 
-    if (mounted) {
-      setState(() {
-        items = result.items;
-        groupedItems = groups;
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          items = result.items;
+          groupedItems = groups;
+        });
+        
+        if (result.error != null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result.error!), 
+              backgroundColor: Colors.redAccent,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Error: $e"), 
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
   }
 

@@ -69,10 +69,34 @@ class PortfolioChart extends StatelessWidget {
             getTooltipItems: (touchedSpots) {
               return touchedSpots.map((spot) {
                 final date = DateTime.fromMillisecondsSinceEpoch(spot.x.toInt());
-                final formattedDate = "${date.hour}:${date.minute.toString().padLeft(2, '0')}";
+                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                final formattedDate = "${date.day} ${months[date.month - 1]} ${date.year}";
+                final formattedTime = "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
                 return LineTooltipItem(
-                  "\$${spot.y.toStringAsFixed(2)}\n$formattedDate",
-                  const TextStyle(color: Colors.white),
+                  "\$${spot.y.toStringAsFixed(2)}",
+                  const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  children: [
+                    TextSpan(
+                      text: "\n$formattedDate",
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontWeight: FontWeight.normal,
+                        fontSize: 12,
+                      ),
+                    ),
+                    TextSpan(
+                      text: "\n$formattedTime",
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontWeight: FontWeight.normal,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
                 );
               }).toList();
             },
