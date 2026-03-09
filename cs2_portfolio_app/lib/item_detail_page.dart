@@ -267,7 +267,7 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                               "${profitLossPercent! >= 0 ? '+' : ''}${profitLossPercent.toStringAsFixed(1)}%",
                               style: TextStyle(
                                 fontSize: 14,
-                                color: profitColor.withOpacity(0.8),
+                                color: profitColor.withAlpha(204),
                               ),
                             ),
                           ],

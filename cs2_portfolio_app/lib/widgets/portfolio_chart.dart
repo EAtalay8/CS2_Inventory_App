@@ -60,7 +60,7 @@ class PortfolioChart extends StatelessWidget {
             dotData: FlDotData(show: points.length < 2),
             belowBarData: BarAreaData(
               show: true,
-              color: (isItemHistory ? Colors.orangeAccent : Colors.greenAccent).withOpacity(0.2),
+              color: (isItemHistory ? Colors.orangeAccent : Colors.greenAccent).withAlpha(51),
             ),
           ),
         ],

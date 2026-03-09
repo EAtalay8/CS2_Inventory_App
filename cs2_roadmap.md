@@ -60,12 +60,10 @@
 
 #### 2.1 Fiyat Güncelleme Hızı İyileştirmesi
 **Dosya:** `inventory_service.dart`
-- [ ] Mevcut: Her item için tek tek istek + 3.5s bekleme (~16 dk toplam)
-- [ ] Araştırılacak seçenekler:
-  - `search/render` endpoint'i ile batch fiyat çekme (aşağıdaki analize bak)
-  - Sadece değişen/eski fiyatları güncelleme (son 24 saatten yeni olan atlanabilir)
-  - 3. parti API kullanımı (CSFloat, PriceEmpire vb. — tek istekte çoklu fiyat)
-- Detaylı analiz: bkz. **Analiz A — Steam Market'ten Direkt Fiyat Çekme**
+- [ ] Yeni `search/render` toplu çekim motoru entegre edilecek
+- [ ] Itemleri 100'lük paketler halinde (max 200) saniyeler içinde güncelliyor
+- [ ] Eksik kalan nadir itemler için otomatik tekli fallback eklendi
+- Not: Geliştirme aşamasında. (23 Feb 2026)
 
 #### 2.2 Market Sayfası: Zaman Aralığı Filtresi ✅
 **Dosya:** `market_page.dart`, `inventory_service.dart`

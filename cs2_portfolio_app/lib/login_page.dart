@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'main.dart';
+import 'steam_login_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,6 +13,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _steamIdController = TextEditingController();
   bool _isLoading = false;
+  bool _showManualInput = false;
 
   Future<void> _login() async {
     final steamId = _steamIdController.text.trim();
@@ -42,6 +44,13 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  void _loginWithSteam() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SteamLoginPage()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -66,57 +75,125 @@ class _LoginPageState extends State<LoginPage> {
               ),
               const SizedBox(height: 48),
 
-              const Text(
-                "Enter your Steam ID64",
-                style: TextStyle(color: Colors.grey, fontSize: 16),
-              ),
-              const SizedBox(height: 12),
-
-              TextField(
-                controller: _steamIdController,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: "e.g. 76561198xxxxxxxxx",
-                  hintStyle: TextStyle(color: Colors.grey.withOpacity(0.5)),
-                  filled: true,
-                  fillColor: Colors.black26,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  prefixIcon: const Icon(Icons.person, color: Colors.grey),
-                ),
-              ),
-              const SizedBox(height: 24),
-
+              // 🔥 Primary: Login with Steam button
               SizedBox(
                 width: double.infinity,
                 height: 50,
-                child: ElevatedButton(
-                  onPressed: _isLoading ? null : _login,
+                child: ElevatedButton.icon(
+                  onPressed: _loginWithSteam,
+                  icon: const Icon(Icons.login, color: Colors.white),
+                  label: const Text(
+                    "Login with Steam",
+                    style: TextStyle(fontSize: 18, color: Colors.white),
+                  ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
+                    backgroundColor: const Color(0xFF1B2838), // Steam dark blue
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                          "Login",
-                          style: TextStyle(fontSize: 18, color: Colors.white),
-                        ),
                 ),
               ),
+
+              const SizedBox(height: 12),
+
+              // Info text about Steam login benefits
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.greenAccent.withAlpha(26),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.greenAccent.withAlpha(77)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.verified, color: Colors.greenAccent, size: 20),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        "Recommended: Steam login enables faster price updates with less rate limiting.",
+                        style: TextStyle(color: Colors.greenAccent, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // Toggle for manual input
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _showManualInput = !_showManualInput;
+                  });
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Or enter Steam ID manually",
+                      style: TextStyle(color: Colors.grey.shade400, fontSize: 14),
+                    ),
+                    const SizedBox(width: 4),
+                    Icon(
+                      _showManualInput ? Icons.expand_less : Icons.expand_more,
+                      color: Colors.grey.shade400,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+
+              // Manual Steam ID input (collapsible)
+              if (_showManualInput) ...[
+                const SizedBox(height: 16),
+                TextField(
+                  controller: _steamIdController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: "e.g. 76561198xxxxxxxxx",
+                    hintStyle: TextStyle(color: Colors.grey.withAlpha(128)),
+                    filled: true,
+                    fillColor: Colors.black26,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    prefixIcon: const Icon(Icons.person, color: Colors.grey),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _login,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.white)
+                        : const Text(
+                            "Login with Steam ID",
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
+                  ),
+                ),
+              ],
 
               const SizedBox(height: 32),
               
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.orangeAccent.withOpacity(0.1),
+                  color: Colors.orangeAccent.withAlpha(26),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.orangeAccent.withOpacity(0.3)),
+                  border: Border.all(color: Colors.orangeAccent.withAlpha(77)),
                 ),
                 child: const Row(
                   children: [

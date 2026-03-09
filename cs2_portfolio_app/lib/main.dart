@@ -88,6 +88,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('steamId');
+    await prefs.remove('steamLoginSecure');
     if (mounted) {
       Navigator.pushReplacementNamed(context, '/login');
     }
@@ -229,7 +230,7 @@ class _HomePageState extends State<HomePage> {
                     color: Colors.white10,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: isPositive ? Colors.greenAccent.withOpacity(0.3) : Colors.redAccent.withOpacity(0.3)
+                      color: isPositive ? Colors.greenAccent.withAlpha(77) : Colors.redAccent.withAlpha(77)
                     ),
                   ),
                   child: Column(
@@ -299,16 +300,9 @@ class _HomePageState extends State<HomePage> {
     
     Color profitColor = profitLoss >= 0 ? Colors.greenAccent : Colors.redAccent;
 
-    // Cooldown check (4 hours)
-    bool canUpdatePrices = true;
+    // Cooldown check (TEMPORARILY DISABLED)
+    bool canUpdatePrices = true; 
     Duration? timeUntilNextUpdate;
-    if (lastPriceRefresh != null) {
-      final diff = DateTime.now().difference(lastPriceRefresh!);
-      if (diff.inHours < 4) {
-        canUpdatePrices = false;
-        timeUntilNextUpdate = const Duration(hours: 4) - diff;
-      }
-    }
 
     return Scaffold(
       appBar: AppBar(
@@ -381,7 +375,7 @@ class _HomePageState extends State<HomePage> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: profitColor.withOpacity(0.2),
+                  color: profitColor.withAlpha(51),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Row(
@@ -485,7 +479,7 @@ class _HomePageState extends State<HomePage> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.purpleAccent.withOpacity(0.2),
+                        backgroundColor: Colors.purpleAccent.withAlpha(51),
                         foregroundColor: Colors.purpleAccent,
                       ),
                       onPressed: () {
