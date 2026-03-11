@@ -1,0 +1,46 @@
+Analyzing cs2_portfolio_app...                                  
+
+  error - The named parameter 'price' isn't defined - lib\inventory_page.dart:436:19 - undefined_named_parameter
+  error - The named parameter 'price' isn't defined - lib\inventory_page.dart:504:19 - undefined_named_parameter
+warning - Dead code - lib\main.dart:428:23 - dead_code
+warning - Dead code - lib\main.dart:428:65 - dead_code
+warning - Dead code - lib\main.dart:428:98 - dead_code
+warning - Dead code - lib\main.dart:431:76 - dead_code
+warning - Dead code - lib\main.dart:436:23 - dead_code
+warning - Unused import: 'package:flutter/material.dart' - lib\services\background_service.dart:3:8 - unused_import
+warning - Unused import: 'background_service.dart' - lib\services\inventory_service.dart:8:8 - unused_import
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:50:7 - avoid_print
+   info - The private field _inventoryCache could be 'final' - lib\services\inventory_service.dart:75:31 - prefer_final_fields
+warning - The value of the local variable 'price' isn't used - lib\services\inventory_service.dart:94:18 - unused_local_variable
+warning - The value of the local variable 'previousPrice' isn't used - lib\services\inventory_service.dart:95:18 - unused_local_variable
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:238:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:250:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:264:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:272:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:273:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:289:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:380:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:382:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:416:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:447:5 - avoid_print
+   info - Unnecessary braces in a string interpolation - lib\services\inventory_service.dart:447:97 - unnecessary_brace_in_string_interps
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:476:13 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:528:18 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:563:15 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:569:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:574:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:578:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:582:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:639:15 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:644:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:651:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:657:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:662:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:669:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\local_storage_service.dart:24:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\local_storage_service.dart:35:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:74:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:104:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:144:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:145:5 - avoid_print
+

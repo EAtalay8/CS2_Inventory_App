@@ -1,15 +1,18 @@
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
-import 'dart:math';
 
 class PortfolioChart extends StatelessWidget {
   final List<Map<String, dynamic>> history;
   final bool isItemHistory; // If true, format differently (e.g. price vs total value)
+  final bool showBothPrices;
+  final String activePriceSource;
 
   const PortfolioChart({
     super.key, 
     required this.history,
     this.isItemHistory = false,
+    this.showBothPrices = false,
+    this.activePriceSource = 'steam',
   });
 
   @override
@@ -20,28 +23,81 @@ class PortfolioChart extends StatelessWidget {
       );
     }
 
-    // Convert history to FlSpots
-    // History format: { "time": 171..., "value": 123.45 } (or "price")
-    
-    // We need to normalize X axis (time) to fit in the chart
-    // Let's use index as X for simplicity, or relative time?
-    // Using timestamp as X is better but numbers are huge.
-    // Let's map timestamp to a double.
-    
-    final points = history.map((e) {
-      final time = (e['time'] as int).toDouble();
-      final value = (e['value'] ?? e['price'] ?? 0).toDouble();
-      return FlSpot(time, value);
-    }).toList();
+    final pointsSteam = <FlSpot>[];
+    final pointsBp = <FlSpot>[];
 
-    // Calculate Min/Max for Y axis to add padding
-    double minY = points.map((e) => e.y).reduce(min);
-    double maxY = points.map((e) => e.y).reduce(max);
+    for (var e in history) {
+      final time = (e['time'] as int).toDouble();
+      
+      if (isItemHistory) {
+         double? steamVal = e['steam_price'] != null ? (e['steam_price'] as num).toDouble() : null;
+         double? bpVal = e['bp_price'] != null ? (e['bp_price'] as num).toDouble() : null;
+         
+         // Legacy fallback
+         double? legacyPrice = e['price'] != null ? (e['price'] as num).toDouble() : null;
+         if (steamVal == null && bpVal == null && legacyPrice != null) {
+            steamVal = legacyPrice;
+         }
+
+         if (steamVal != null) pointsSteam.add(FlSpot(time, steamVal));
+         if (bpVal != null) pointsBp.add(FlSpot(time, bpVal));
+      } else {
+         double? legacyValue = e['value'] != null ? (e['value'] as num).toDouble() : null;
+         double? steamVal = e['steam_value'] != null ? (e['steam_value'] as num).toDouble() : legacyValue;
+         double? bpVal = e['bp_value'] != null ? (e['bp_value'] as num).toDouble() : legacyValue;
+         
+         if (steamVal != null) pointsSteam.add(FlSpot(time, steamVal));
+         if (bpVal != null) pointsBp.add(FlSpot(time, bpVal));
+      }
+    }
+
+    // Determine min/max
+    double minY = double.infinity;
+    double maxY = double.negativeInfinity;
+    
+    final activePoints = activePriceSource == 'steam' ? pointsSteam : pointsBp;
+
+    if (showBothPrices) {
+       for (var p in pointsSteam) { if(p.y < minY) minY = p.y; if(p.y > maxY) maxY = p.y; }
+       for (var p in pointsBp) { if(p.y < minY) minY = p.y; if(p.y > maxY) maxY = p.y; }
+    } else {
+       for (var p in activePoints) { if(p.y < minY) minY = p.y; if(p.y > maxY) maxY = p.y; }
+    }
+    
+    if (minY == double.infinity) { minY = 0; maxY = 1; }
+    
     double range = maxY - minY;
     if (range == 0) range = 1; // Avoid division by zero
     
     minY -= range * 0.1;
     maxY += range * 0.1;
+
+    // Build the lines
+    List<LineChartBarData> lineBars = [];
+    
+    if ((showBothPrices || activePriceSource == 'steam') && pointsSteam.isNotEmpty) {
+      lineBars.add(LineChartBarData(
+        spots: pointsSteam,
+        isCurved: false,
+        color: Colors.lightBlue[300]!, // Steam color
+        barWidth: 3,
+        isStrokeCapRound: true,
+        dotData: FlDotData(show: pointsSteam.length < 2),
+        belowBarData: BarAreaData(show: true, color: Colors.lightBlue[300]!.withAlpha(30)),
+      ));
+    }
+    
+    if ((showBothPrices || activePriceSource == 'bp') && pointsBp.isNotEmpty) {
+      lineBars.add(LineChartBarData(
+        spots: pointsBp,
+        isCurved: false,
+        color: Colors.amber[400]!, // Backpack color
+        barWidth: 3,
+        isStrokeCapRound: true,
+        dotData: FlDotData(show: pointsBp.length < 2),
+        belowBarData: BarAreaData(show: true, color: Colors.amber[400]!.withAlpha(30)),
+      ));
+    }
 
     return LineChart(
       LineChartData(
@@ -50,20 +106,7 @@ class PortfolioChart extends StatelessWidget {
         borderData: FlBorderData(show: false),
         minY: minY,
         maxY: maxY,
-        lineBarsData: [
-          LineChartBarData(
-            spots: points,
-            isCurved: false,
-            color: isItemHistory ? Colors.orangeAccent : Colors.greenAccent,
-            barWidth: 3,
-            isStrokeCapRound: true,
-            dotData: FlDotData(show: points.length < 2),
-            belowBarData: BarAreaData(
-              show: true,
-              color: (isItemHistory ? Colors.orangeAccent : Colors.greenAccent).withAlpha(51),
-            ),
-          ),
-        ],
+        lineBarsData: lineBars,
         lineTouchData: LineTouchData(
           touchTooltipData: LineTouchTooltipData(
             getTooltipItems: (touchedSpots) {
@@ -74,8 +117,8 @@ class PortfolioChart extends StatelessWidget {
                 final formattedTime = "${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}";
                 return LineTooltipItem(
                   "\$${spot.y.toStringAsFixed(2)}",
-                  const TextStyle(
-                    color: Colors.white,
+                  TextStyle(
+                    color: spot.barIndex == 0 ? (showBothPrices || activePriceSource == 'steam' ? Colors.lightBlue[200] : Colors.amber[200]) : Colors.amber[200],
                     fontWeight: FontWeight.bold,
                     fontSize: 14,
                   ),

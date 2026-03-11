@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
+import 'package:brotli/brotli.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/inventory_item.dart';
@@ -56,10 +57,14 @@ class InventoryService {
   static final StreamController<String> _progressController = StreamController<String>.broadcast();
   Stream<String> get progressStream => _progressController.stream;
 
+  static bool _isUpdating = false;
+
   // Cache for loaded data (Static to persist across instances)
   static Map<String, dynamic> _prices = {};
   static Map<String, dynamic> _portfolio = {};
   static Map<String, dynamic> _history = {};
+  
+  static final bool _dataLoaded = false;
 
   Future<void> _loadLocalData() async {
     _prices = await _storage.loadData('prices.json');
@@ -72,7 +77,7 @@ class InventoryService {
   }
 
   // Cache for raw inventory items (mimicking server.js inventoryCache)
-  static Map<String, dynamic> _inventoryCache = {};
+  static final Map<String, dynamic> _inventoryCache = {};
   static const int _inventoryCacheTTL = 1000 * 60 * 5; // 5 minutes
 
   Future<InventoryResult> fetchInventory(String steamId, {bool forceUpdate = false}) async {
@@ -91,13 +96,24 @@ class InventoryService {
       for (var item in rawItems) {
          // Merge with Local Data
          final priceEntry = _prices[item.name];
-         double? price;
-         double? previousPrice;
+         double? steamPrice;
+         double? bpPrice;
+         double? steamPreviousPrice;
+         double? bpPreviousPrice;
          DateTime? lastUpdated;
 
          if (priceEntry != null) {
-           price = (priceEntry["price"] as num?)?.toDouble();
-           previousPrice = (priceEntry["previous_price"] as num?)?.toDouble();
+           steamPrice = (priceEntry["steam_price"] as num?)?.toDouble();
+           bpPrice = (priceEntry["bp_price"] as num?)?.toDouble();
+           steamPreviousPrice = (priceEntry["steam_previous_price"] as num?)?.toDouble();
+           bpPreviousPrice = (priceEntry["bp_previous_price"] as num?)?.toDouble();
+
+           // Legacy fallback for old cache formats
+           if (steamPrice == null && priceEntry["price"] != null) {
+             steamPrice = (priceEntry["price"] as num?)?.toDouble();
+             steamPreviousPrice = (priceEntry["previous_price"] as num?)?.toDouble();
+           }
+
            if (priceEntry["time"] != null) {
              lastUpdated = DateTime.fromMillisecondsSinceEpoch(priceEntry["time"]);
            }
@@ -120,8 +136,10 @@ class InventoryService {
            icon: item.icon,
            type: item.type,
            marketable: item.marketable,
-           price: price,
-           previousPrice: previousPrice,
+           steamPrice: steamPrice,
+           steamPreviousPrice: steamPreviousPrice,
+           bpPrice: bpPrice,
+           bpPreviousPrice: bpPreviousPrice,
            purchasePrice: purchasePrice,
            isWatched: isWatched,
            lastUpdated: lastUpdated,
@@ -149,7 +167,12 @@ class InventoryService {
 
       // Handle Price Updates (Force Update)
       if (forceUpdate) {
-        _updatePricesInBackground(pricedItems);
+        final service = FlutterBackgroundService();
+        if (!await service.isRunning()) {
+          await service.startService();
+          await Future.delayed(const Duration(milliseconds: 500));
+        }
+        service.invoke("startSteamUpdate");
       }
 
       return InventoryResult(
@@ -162,26 +185,54 @@ class InventoryService {
 
     } catch (e) {
       // On error, return items with CACHED prices instead of empty list
-      // This prevents the inventory from showing $0 when Steam is down
+      // This prevents the inventory from showing $0 when Steam is down or rate-limited
       List<InventoryItem> cachedItems = [];
       double cachedTotalValue = 0;
       double cachedTotalPurchaseValue = 0;
       double cachedTotalValueForProfitCalc = 0;
 
-      final cached = _inventoryCache[steamId];
+      // First check memory cache
+      var cached = _inventoryCache[steamId];
+      List<InventoryItem>? rawItems;
+
       if (cached != null) {
-        final rawItems = cached['items'] as List<InventoryItem>;
+        rawItems = cached['items'] as List<InventoryItem>;
+      } else {
+        // Fallback to disk cache if memory is empty (e.g. on app restart)
+        final diskCache = await _storage.loadData('inventory.json');
+        if (diskCache != null && diskCache['items'] != null) {
+          rawItems = (diskCache['items'] as List).map((e) => InventoryItem.fromJson(e)).toList();
+        }
+      }
+
+      if (rawItems != null) {
         for (var item in rawItems) {
           final priceEntry = _prices[item.name];
-          double? price = priceEntry != null ? (priceEntry["price"] as num?)?.toDouble() : null;
-          double? previousPrice = priceEntry != null ? (priceEntry["previous_price"] as num?)?.toDouble() : null;
+          double? steamPrice = (priceEntry?["steam_price"] as num?)?.toDouble();
+          double? steamPrevPrice = (priceEntry?["steam_previous_price"] as num?)?.toDouble();
+          double? bpPrice = (priceEntry?["bp_price"] as num?)?.toDouble();
+          double? bpPrevPrice = (priceEntry?["bp_previous_price"] as num?)?.toDouble();
+
+          // Legacy support
+          if (steamPrice == null && priceEntry?["price"] != null) {
+            steamPrice = (priceEntry?["price"] as num?)?.toDouble();
+            steamPrevPrice = (priceEntry?["previous_price"] as num?)?.toDouble();
+          }
+
+          double? price = steamPrice ?? bpPrice;
+          // previousPrice is not directly used in the constructor, but the getter will derive it.
+
           final portfolioEntry = _portfolio[item.assetid];
           double? purchasePrice = portfolioEntry != null ? (portfolioEntry["purchase_price"] as num?)?.toDouble() : null;
 
           final newItem = InventoryItem(
-            assetid: item.assetid, classid: item.classid, name: item.name,
+            assetid: item.assetid,
+            classid: item.classid,
+            name: item.name,
             icon: item.icon, type: item.type, marketable: item.marketable,
-            price: price, previousPrice: previousPrice, purchasePrice: purchasePrice,
+            steamPrice: steamPrice, steamPreviousPrice: steamPrevPrice,
+            bpPrice: bpPrice, bpPreviousPrice: bpPrevPrice,
+            purchasePrice: purchasePrice,
             isWatched: portfolioEntry?["watch"] == true,
           );
           cachedItems.add(newItem);
@@ -322,8 +373,10 @@ class InventoryService {
          icon: icon,
          type: type,
          marketable: marketable,
-         price: null, // Set later
-         previousPrice: null,
+         steamPrice: null,
+         steamPreviousPrice: null,
+         bpPrice: null,
+         bpPreviousPrice: null,
          purchasePrice: null,
          isWatched: false,
        ));
@@ -335,18 +388,63 @@ class InventoryService {
       'time': DateTime.now().millisecondsSinceEpoch
     };
 
+    // Save to Disk for Background Services
+    await _storage.saveData('inventory.json', {
+      'items': items.map((e) => e.toJson()).toList(),
+      'time': DateTime.now().millisecondsSinceEpoch
+    });
+
     return items;
   }
 
-
-  // 🔥 Background Price Update Logic
-  Future<void> _updatePricesInBackground(List<InventoryItem> items) async {
-    // Start Background Service
-    final service = FlutterBackgroundService();
-    if (!await service.isRunning()) {
-      service.startService();
+  /// Update trigger from UI (Steam)
+  Future<void> updateAllPrices() async {
+    if (_isUpdating) {
+      print("⚠️ Update already in progress.");
+      return; 
     }
 
+    final service = FlutterBackgroundService();
+    final cached = await _storage.loadData('inventory.json');
+    if (cached['items'] == null) {
+      print("❌ Cannot update: Inventory cache empty.");
+      return;
+    }
+    
+    _isUpdating = true;
+    try {
+      if (!await service.isRunning()) {
+        await service.startService();
+      }
+      final rawItems = cached['items'] as List<dynamic>;
+      final List<InventoryItem> items = rawItems.map((e) => InventoryItem.fromJson(e)).toList();
+      await _updatePricesInBackground(items, service);
+    } finally {
+      _isUpdating = false;
+    }
+  }
+
+  /// Update trigger from UI (CSGO Backpack)
+  Future<void> updateAllPricesFromBP() async {
+    if (_isUpdating) {
+      print("⚠️ Update already in progress.");
+      return; 
+    }
+
+    final service = FlutterBackgroundService();
+    _isUpdating = true;
+    try {
+      if (!await service.isRunning()) {
+        await service.startService();
+      }
+      await _updatePricesFromBPInBackground(service);
+    } finally {
+      _isUpdating = false;
+    }
+  }
+
+  // 🔥 Background Price Update Logic (Steam)
+  Future<void> _updatePricesInBackground(List<InventoryItem> items, FlutterBackgroundService service) async {
     // Normalize names and filter marketable items
     // We store the ORIGINAL name for storage keys, but use NORMALIZED for matching
     final Map<String, String> normalizedToOriginal = {};
@@ -369,20 +467,43 @@ class InventoryService {
 
     service.invoke("updateNotification", {"content": "Starting price update..."});
     
-    // --- 📦 PHASE 1: BATCH UPDATE (Search/Render) ---
+    // --- 📦 PHASE 1: SMART BATCH UPDATE (Search/Render) ---
     Set<String> allBatchUpdated = {};
     
-    print("🚀 Starting Deep Batch Update Phase (1000 items)...");
-    _progressController.add("Deep batching top 1000 skins...");
+    // Extract unique subcategories (keywords) from user's inventory
+    Set<String> searchKeywords = {};
+    for (var item in items.where((i) => i.marketable == 1)) {
+       // "AK-47", "M4A4", "Stickers", "Containers" etc.
+       // But wait: searching "Containers" literally might not match Case names since the word might be missing.
+       // Let's refine the keyword: if category is not Weapons, just search the exact base name (with a limit) or a generic term.
+       // Actually, searching "Case", "Sticker", "Graffiti" works wonderfully with Steam's search engine.
+       String keyword = item.subCategory;
+       if (keyword == "Containers") keyword = "Case";
+       if (keyword == "Stickers") keyword = "Sticker";
+       if (keyword == "Graffitis") keyword = "Graffiti";
+       if (keyword == "Music Kits") keyword = "Music Kit";
+       if (keyword == "Agents") keyword = "Agent";
+       if (keyword == "Pins") keyword = "Pin";
+       if (keyword == "Patches") keyword = "Patch";
+       searchKeywords.add(keyword);
+    }
     
-    // Scan 5 pages (500 items total)
-    for (int i = 0; i < 10; i++) {
-      int start = i * 100;
-      final batch = await _fetchPricesInBatch(start, 100);
+    // If we have "Others", remove it to avoid junk searches
+    searchKeywords.remove("Others");
+    
+    print("🚀 Starting Smart Batch Update Phase for ${searchKeywords.length} categories: $searchKeywords");
+    
+    int batchIndex = 0;
+    for (var keyword in searchKeywords) {
+      batchIndex++;
+      _progressController.add("Batching $keyword... ($batchIndex/${searchKeywords.length})");
+      
+      // Fetch top 100 for this specific subcategory
+      final batch = await _fetchPricesInBatch(keyword, 0, 100);
       allBatchUpdated.addAll(batch);
       
-      // Small cooling-off between batches
-      if (i < 9) {
+      // Small cooling-off between batch requests
+      if (batchIndex < searchKeywords.length) {
         await Future.delayed(const Duration(seconds: 4));
       }
     }
@@ -390,7 +511,7 @@ class InventoryService {
     // Phase transition cool-off (Let Steam breathe)
     if (allBatchUpdated.isNotEmpty) {
       _progressController.add("Found ${allBatchUpdated.length} items. Syncing remaining...");
-      await Future.delayed(const Duration(seconds: 10));
+      await Future.delayed(const Duration(seconds: 8));
     } else {
       _progressController.add("No items found in batch. Syncing all one-by-one...");
       await Future.delayed(const Duration(seconds: 5));
@@ -401,7 +522,7 @@ class InventoryService {
     int remainingTotal = remainingNormalized.length;
     int current = 0;
     
-    print("🔍 Batch Phase Result: Found ${uniqueNormalizedNames.length - remainingTotal} items. ${remainingTotal} remaining.");
+    print("🔍 Batch Phase Result: Found ${uniqueNormalizedNames.length - remainingTotal} items. $remainingTotal remaining.");
 
     if (remainingTotal > 0) {
       int consecutiveErrors = 0;
@@ -453,8 +574,8 @@ class InventoryService {
 
   /// Fetches 100 items from Steam Search and updates prices in batch.
   /// Returns a set of names that were successfully updated.
-  Future<Set<String>> _fetchPricesInBatch(int start, int count) async {
-    final url = Uri.parse("https://steamcommunity.com/market/search/render/?query=&start=$start&count=$count&search_descriptions=0&sort_column=popular&sort_dir=desc&appid=730&norender=1&currency=1");
+  Future<Set<String>> _fetchPricesInBatch(String query, int start, int count) async {
+    final url = Uri.parse("https://steamcommunity.com/market/search/render/?query=${Uri.encodeComponent(query)}&start=$start&count=$count&search_descriptions=0&sort_column=popular&sort_dir=desc&appid=730&norender=1&currency=1");
     final Set<String> updatedNames = {};
 
     int retryAttempt = 0;
@@ -489,19 +610,22 @@ class InventoryService {
                 double? price = _parsePrice(priceStr);
                 if (price != null) {
                   // We update the original raw name in our storage to match fallback keys
-                  final oldEntry = _prices[rawHashName];
-                  double? previousPrice = oldEntry != null ? (oldEntry["price"] as num?)?.toDouble() : null;
+                  final oldEntry = _prices[rawHashName] ?? {};
+                  double? previousSteamPrice = oldEntry["steam_price"] != null 
+                      ? (oldEntry["steam_price"] as num?)?.toDouble() 
+                      : (oldEntry["price"] as num?)?.toDouble(); // legacy fallback
                   
                   _prices[rawHashName] = {
-                    "price": price,
-                    "previous_price": previousPrice,
+                    ...oldEntry, // Preserve BP and other keys
+                    "steam_price": price,
+                    "steam_previous_price": previousSteamPrice,
                     "time": DateTime.now().millisecondsSinceEpoch
                   };
                   
                   if (historyItems[rawHashName] == null) historyItems[rawHashName] = [];
                   (historyItems[rawHashName] as List).add({
                     "time": DateTime.now().millisecondsSinceEpoch,
-                    "price": price
+                    "steam_price": price
                   });
                   
                   // Mark as updated using BOTH original and normalized for safety
@@ -563,25 +687,30 @@ class InventoryService {
 
             if (price != null) {
               // Update Prices
-              final oldEntry = _prices[marketHashName];
-              double? previousPrice = oldEntry != null ? (oldEntry["price"] as num?)?.toDouble() : null;
+              final oldPriceEntry = _prices[marketHashName] ?? {};
+              double? previousSteamPrice = oldPriceEntry["steam_price"] != null
+                  ? (oldPriceEntry["steam_price"] as num?)?.toDouble()
+                  : (oldPriceEntry["price"] as num?)?.toDouble(); // legacy fallback
 
               _prices[marketHashName] = {
-                "price": price,
-                "previous_price": previousPrice,
+                ...oldPriceEntry, // Preserve BP and other keys
+                "steam_price": price,
+                "steam_previous_price": previousSteamPrice,
                 "time": DateTime.now().millisecondsSinceEpoch
               };
               
               if (saveToDisk) await _storage.saveData('prices.json', _prices);
 
               // Update Item History
-              if (_history["items"][marketHashName] == null) {
-                _history["items"][marketHashName] = [];
+              final Map<String, dynamic> historyItems = (_history["items"] as Map<String, dynamic>?) ?? {};
+              if (historyItems[marketHashName] == null) {
+                historyItems[marketHashName] = [];
               }
-              (_history["items"][marketHashName] as List).add({
+              (historyItems[marketHashName] as List).add({
                 "time": DateTime.now().millisecondsSinceEpoch,
-                "price": price
+                "steam_price": price
               });
+              _history["items"] = historyItems; // Ensure _history["items"] is updated
               
               if (saveToDisk) await _storage.saveData('history.json', _history);
               
@@ -615,24 +744,173 @@ class InventoryService {
       }
     }
 
-    print("❌ Failed to fetch price for $marketHashName after $maxRetries attempts");
+    print("❌ Failed completely to fetch price for $marketHashName after $maxRetries attempts");
     return false;
   }
 
+  // ===========================================================================
+  // 🎒 PHASE 2.5: CSGO BACKPACK INTEGRATION (INSTANT)
+  // ===========================================================================
+
+  Future<void> _updatePricesFromBPInBackground(FlutterBackgroundService service) async {
+    try {
+      print("🎒 Initializing CSGO Backpack Price Update...");
+      
+      // 1. Fetch Inventory & Prepare
+      final cached = await _storage.loadData('inventory.json');
+      if (cached['items'] == null) {
+        print("❌ Inventory cache not found.");
+        service.invoke("updateNotification", {"content": "Inventory not loaded"});
+        service.invoke("stopService");
+        return;
+      }
+
+      final rawItems = cached['items'] as List<dynamic>;
+      final List<InventoryItem> items = rawItems.map((e) => InventoryItem.fromJson(e)).toList();
+      
+      // Get unique normalized names
+      Map<String, String> normalizedToOriginal = {};
+      for (var item in items) {
+        if (item.marketable == 1) {
+          normalizedToOriginal[item.name.trim().toLowerCase()] = item.name;
+        }
+      }
+      
+      int totalItems = normalizedToOriginal.length;
+      print("🔍 Total unique active items to update: $totalItems");
+
+      // 2. Fetch Bulk API (Skinport)
+      print("🌍 Fetching 20,000+ items from Skinport...");
+      service.invoke("updateNotification", {"content": "Fetching Backpack API..."});
+
+      final res = await http.get(
+        Uri.parse('https://api.skinport.com/v1/items?app_id=730&currency=USD&tradable=0'),
+        headers: {
+          'Accept-Encoding': 'br', // Force Brotli compression
+        },
+      );
+
+      if (res.statusCode != 200) {
+        print("❌ HTTP Error ${res.statusCode} from Skinport API");
+        service.invoke("updateNotification", {"content": "API Error: ${res.statusCode}"});
+        service.invoke("stopService");
+        return;
+      }
+
+      print("✅ Skinport API response received. Decoding Brotli and Parsing JSON...");
+      
+      final decodedBytes = brotli.decode(res.bodyBytes);
+      final jsonString = utf8.decode(decodedBytes);
+      final List<dynamic> itemsList = json.decode(jsonString);
+
+      if (itemsList.isEmpty) {
+        print("❌ Skinport API returned empty list.");
+        service.invoke("stopService");
+        return;
+      }
+
+      print("📦 Successfully parsed ${itemsList.length} global items.");
+
+      // 3. Match & Update Prices
+      int matches = 0;
+      final Map<String, dynamic> historyItems = (_history["items"] as Map<String, dynamic>?) ?? {};
+
+      for (var bpData in itemsList) {
+        String bpName = bpData["market_hash_name"] as String;
+        String normBpName = bpName.trim().toLowerCase();
+        
+        if (normalizedToOriginal.containsKey(normBpName)) {
+           final originalName = normalizedToOriginal[normBpName]!;
+           
+           // Skinport structure: min_price and suggested_price
+           double? newBpPrice;
+           try {
+             if (bpData["min_price"] != null) {
+               newBpPrice = (bpData["min_price"] as num).toDouble();
+             } else if (bpData["suggested_price"] != null) {
+               newBpPrice = (bpData["suggested_price"] as num).toDouble();
+             }
+           } catch (e) {
+             print("⚠️ Error parsing price for $bpName: $e");
+           }
+
+           if (newBpPrice != null && newBpPrice > 0) {
+              matches++;
+              
+              final oldPriceEntry = _prices[originalName] ?? {};
+              double? previousBpPrice = oldPriceEntry["bp_price"] != null
+                  ? (oldPriceEntry["bp_price"] as num?)?.toDouble()
+                  : null;
+
+              _prices[originalName] = {
+                ...oldPriceEntry, // Preserve steam_price
+                "bp_price": newBpPrice,
+                "bp_previous_price": previousBpPrice,
+                "time": DateTime.now().millisecondsSinceEpoch
+              };
+              
+              if (historyItems[originalName] == null) {
+                historyItems[originalName] = [];
+              }
+              (historyItems[originalName] as List).add({
+                "time": DateTime.now().millisecondsSinceEpoch,
+                "bp_price": newBpPrice
+              });
+           }
+        }
+      }
+
+      _history["items"] = historyItems;
+      
+      print("💾 Saving matching Backpack prices to disk ($matches/$totalItems matched)...");
+      await _storage.saveData('prices.json', _prices);
+      await _storage.saveData('history.json', _history);
+
+      // Update Portfolio Meta
+      if (_portfolio["_meta"] == null) _portfolio["_meta"] = {};
+      _portfolio["_meta"]["last_bp_price_refresh"] = DateTime.now().millisecondsSinceEpoch;
+      await _storage.saveData('portfolio.json', _portfolio);
+
+      // Record total history
+      await _recordTotalValueHistory(items);
+
+      print("🎉 Backpack Update Complete in 1 API request!");
+      service.invoke("updateNotification", {"content": "Backpack Update Complete!"});
+
+    } catch (e) {
+      print("❌ Fatal error in Backpack Update: $e");
+      service.invoke("updateNotification", {"content": "Error: $e"});
+    } finally {
+      await Future.delayed(const Duration(seconds: 4));
+      service.invoke("stopService");
+    }
+  }
+
+  // ===========================================================================
+  // MISCELLANEOUS / HELPERS
+  // ===========================================================================
+
   Future<void> _recordTotalValueHistory(List<InventoryItem> items) async {
     // Re-calculate total value with new prices
-    double total = 0;
+    double totalSteam = 0;
+    double totalBp = 0;
+    
     for (var item in items) {
       final priceEntry = _prices[item.name];
       if (priceEntry != null) {
-        total += (priceEntry["price"] as num).toDouble();
+        double? steam = (priceEntry["steam_price"] as num?)?.toDouble();
+        double? bp = (priceEntry["bp_price"] as num?)?.toDouble();
+        if (steam != null) totalSteam += steam;
+        if (bp != null) totalBp += bp;
       }
     }
 
-    if (total > 0) {
+    if (totalSteam > 0 || totalBp > 0) {
+      if (_history["total_value"] == null) _history["total_value"] = [];
       (_history["total_value"] as List).add({
         "time": DateTime.now().millisecondsSinceEpoch,
-        "value": total
+        "steam_value": totalSteam,
+        "bp_value": totalBp
       });
       await _storage.saveData('history.json', _history);
     }
@@ -655,13 +933,14 @@ class InventoryService {
   Future<bool> savePurchasePrice(String assetId, double? price) async {
     await _loadLocalData();
     if (price == null) {
-      _portfolio.remove(assetId);
+      if (_portfolio[assetId] != null) {
+         _portfolio[assetId]["purchase_price"] = null;
+         _portfolio[assetId]["time"] = DateTime.now().millisecondsSinceEpoch;
+      }
     } else {
-      _portfolio[assetId] = {
-        "purchase_price": price,
-        "time": DateTime.now().millisecondsSinceEpoch,
-        "watch": _portfolio[assetId]?["watch"] ?? false
-      };
+      _portfolio[assetId] = _portfolio[assetId] ?? {};
+      _portfolio[assetId]["purchase_price"] = price;
+      _portfolio[assetId]["time"] = DateTime.now().millisecondsSinceEpoch;
     }
     await _storage.saveData('portfolio.json', _portfolio);
     return true;
@@ -669,10 +948,9 @@ class InventoryService {
 
   Future<bool> toggleWatch(String assetId, bool isWatched) async {
     await _loadLocalData();
-    if (_portfolio[assetId] == null) {
-      _portfolio[assetId] = {"time": DateTime.now().millisecondsSinceEpoch};
-    }
+    _portfolio[assetId] = _portfolio[assetId] ?? {};
     _portfolio[assetId]["watch"] = isWatched;
+    _portfolio[assetId]["time"] = DateTime.now().millisecondsSinceEpoch;
     await _storage.saveData('portfolio.json', _portfolio);
     return true;
   }

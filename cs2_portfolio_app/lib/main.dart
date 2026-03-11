@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'inventory_page.dart';
@@ -10,8 +11,18 @@ import 'item_detail_page.dart';
 
 import 'services/background_service.dart';
 
+// 🔥 Global Override for SSL Certificate Handshake errors on Emulators
+class MyHttpOverrides extends HttpOverrides {
+  @override
+  HttpClient createHttpClient(SecurityContext? context) {
+    return super.createHttpClient(context)
+      ..badCertificateCallback = (X509Certificate cert, String host, int port) => true;
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  HttpOverrides.global = MyHttpOverrides(); // Apply HTTP overrides
   await BackgroundService.initializeService(); // Initialize Service
   
   final prefs = await SharedPreferences.getInstance();
@@ -46,9 +57,6 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  double totalValue = 0.0;
-  double totalPurchaseValue = 0.0;
-  double totalValueForProfitCalc = 0.0;
   bool loading = true;
   DateTime? lastRefreshTime;
   DateTime? lastPriceRefresh;
@@ -58,6 +66,37 @@ class _HomePageState extends State<HomePage> {
   double minPriceFilter = 0.50; // Default, will be updated from prefs
 
   String updateProgress = ""; // Store "5/285"
+
+  // 🔥 Dual Pricing State
+  bool showBothPrices = false;
+  String activePriceSource = 'steam'; // 'steam' or 'bp'
+
+  // Dynamic getters to replace the old static variables
+  double get totalValueSteam {
+    return items.fold(0.0, (sum, item) => sum + (item.steamPrice ?? 0.0));
+  }
+  double get totalValueBp {
+    return items.fold(0.0, (sum, item) => sum + (item.bpPrice ?? 0.0));
+  }
+  double get activeTotalValue => activePriceSource == 'steam' ? totalValueSteam : totalValueBp;
+
+  double get activeTotalValueForProfitCalc {
+    double total = 0;
+    for (var item in items) {
+      if (item.purchasePrice != null && item.purchasePrice! > 0) {
+        if (activePriceSource == 'steam' && item.steamPrice != null) {
+          total += item.steamPrice!;
+        } else if (activePriceSource == 'bp' && item.bpPrice != null) {
+          total += item.bpPrice!;
+        }
+      }
+    }
+    return total;
+  }
+
+  double get totalPurchaseValue {
+    return items.fold(0.0, (sum, item) => sum + (item.purchasePrice ?? 0.0));
+  }
 
   @override
   void initState() {
@@ -79,6 +118,8 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       steamId = prefs.getString('steamId');
       minPriceFilter = prefs.getDouble('minPriceFilter') ?? 0.50;
+      showBothPrices = prefs.getBool('showBothPrices') ?? false;
+      activePriceSource = prefs.getString('activePriceSource') ?? 'steam';
     });
     if (steamId != null) {
       loadTotalValue();
@@ -92,6 +133,65 @@ class _HomePageState extends State<HomePage> {
     if (mounted) {
       Navigator.pushReplacementNamed(context, '/login');
     }
+  }
+
+  void _showSettingsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text("Settings"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SwitchListTile(
+                    title: const Text("Dual Price View"),
+                    subtitle: const Text("Show Steam and Backpack prices simultaneously"),
+                    value: showBothPrices,
+                    activeThumbColor: Colors.amber,
+                    onChanged: (val) async {
+                      final prefs = await SharedPreferences.getInstance();
+                      await prefs.setBool('showBothPrices', val);
+                      setDialogState(() => showBothPrices = val);
+                      setState(() => showBothPrices = val);
+                    },
+                  ),
+                  if (!showBothPrices) ...[
+                    const Divider(),
+                    const Text("Active Source:", style: TextStyle(color: Colors.grey)),
+                    const SizedBox(height: 12),
+                    SegmentedButton<String>(
+                      segments: const [
+                        ButtonSegment(value: 'steam', label: Text('Steam')),
+                        ButtonSegment(value: 'bp', label: Text('Backpack')),
+                      ],
+                      selected: {activePriceSource},
+                      onSelectionChanged: (Set<String> newSelection) async {
+                        final prefs = await SharedPreferences.getInstance();
+                        await prefs.setString('activePriceSource', newSelection.first);
+                        setDialogState(() => activePriceSource = newSelection.first);
+                        setState(() => activePriceSource = newSelection.first);
+                      },
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    loadTotalValue(showLoading: false); // Refresh UI
+                  },
+                  child: const Text("Close"),
+                ),
+              ],
+            );
+          }
+        );
+      }
+    );
   }
 
   Future<void> loadTotalValue({bool forceUpdate = false, bool showLoading = true}) async {
@@ -122,9 +222,6 @@ class _HomePageState extends State<HomePage> {
       if (mounted) {
         setState(() {
           items = result.items;
-          totalValue = result.totalValue;
-          totalPurchaseValue = result.totalPurchaseValue;
-          totalValueForProfitCalc = result.totalValueForProfitCalc;
           lastRefreshTime = DateTime.now();
           if (result.lastPriceRefresh != null) {
             lastPriceRefresh = result.lastPriceRefresh;
@@ -289,11 +386,11 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Profit/Loss Calculation:
-    double profitLoss = totalValueForProfitCalc - totalPurchaseValue;
+    // Profit/Loss Calculation based on Active Source
+    double profitLoss = activeTotalValueForProfitCalc - totalPurchaseValue;
     
     // Calculate percentage relative to the TOTAL inventory value (Portfolio Growth)
-    double totalCostBasis = totalValue - profitLoss;
+    double totalCostBasis = activeTotalValue - profitLoss;
     double profitPercent = totalCostBasis > 0 
         ? (profitLoss / totalCostBasis) * 100 
         : 0.0;
@@ -309,6 +406,11 @@ class _HomePageState extends State<HomePage> {
         title: const Text("CS2 Portfolio"),
         centerTitle: true,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: _showSettingsDialog,
+            tooltip: "Settings",
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: _logout,
@@ -337,15 +439,53 @@ class _HomePageState extends State<HomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(
-                              "\$${totalValue.toStringAsFixed(2)}",
-                              style: const TextStyle(
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
+                            if (showBothPrices) ...[
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.cloud_sync, size: 24, color: Colors.lightBlue),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        "\$${totalValueSteam.toStringAsFixed(2)}",
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.lightBlue[300],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.flash_on, size: 24, color: Colors.amber),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        "\$${totalValueBp.toStringAsFixed(2)}",
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: Colors.amber[400],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
                               ),
-                            ),
+                            ] else ...[
+                              Text(
+                                "\$${activeTotalValue.toStringAsFixed(2)}",
+                                style: TextStyle(
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  color: activePriceSource == 'steam' ? Colors.lightBlue[300] : Colors.amber[400],
+                                ),
+                              ),
+                            ],
                             const SizedBox(width: 10),
                             IconButton(
                               icon: const Icon(Icons.refresh, color: Colors.white70),
@@ -413,28 +553,50 @@ class _HomePageState extends State<HomePage> {
                 ),
                 child: loading 
                     ? const Center(child: CircularProgressIndicator())
-                    : PortfolioChart(history: history),
+                    : PortfolioChart(
+                        history: history,
+                        showBothPrices: showBothPrices,
+                        activePriceSource: activePriceSource,
+                      ),
               ),
 
               const SizedBox(height: 24),
 
-              // Update Prices Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.cloud_sync),
-                  label: Text(canUpdatePrices 
-                    ? "Update Prices from Steam" 
-                    : "Update Available in ${timeUntilNextUpdate?.inHours}:${(timeUntilNextUpdate?.inMinutes ?? 0) % 60}m"
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: canUpdatePrices ? Colors.blueAccent : Colors.grey,
-                    foregroundColor: Colors.white,
-                  ),
-                  onPressed: canUpdatePrices 
-                    ? () => loadTotalValue(forceUpdate: true) 
-                    : null,
-                ),
+              // Update Prices Buttons
+              Row(
+                children: [
+                  if (showBothPrices || activePriceSource == 'steam')
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.cloud_sync, size: 18),
+                        label: const Text("Steam", style: TextStyle(fontSize: 13)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.lightBlue[700],
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () {
+                          InventoryService().updateAllPrices();
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Steam Background Update Started")));
+                        },
+                      ),
+                    ),
+                  if (showBothPrices) const SizedBox(width: 12),
+                  if (showBothPrices || activePriceSource == 'bp')
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.flash_on, size: 18),
+                        label: const Text("Backpack", style: TextStyle(fontSize: 13)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.amber[800],
+                          foregroundColor: Colors.white,
+                        ),
+                        onPressed: () {
+                          InventoryService().updateAllPricesFromBP();
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Backpack Instant Update Started")));
+                        },
+                      ),
+                    ),
+                ],
               ),
               if (updateProgress.isNotEmpty)
                 Padding(

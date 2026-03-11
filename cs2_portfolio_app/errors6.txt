@@ -1,0 +1,69 @@
+Analyzing cs2_portfolio_app...                                  
+
+warning - Dead code - lib\main.dart:428:23 - dead_code
+warning - Dead code - lib\main.dart:428:65 - dead_code
+warning - Dead code - lib\main.dart:428:98 - dead_code
+warning - Dead code - lib\main.dart:431:76 - dead_code
+warning - Dead code - lib\main.dart:436:23 - dead_code
+warning - Unused import: 'package:flutter/material.dart' - lib\services\background_service.dart:3:8 - unused_import
+warning - Unused import: 'background_service.dart' - lib\services\inventory_service.dart:8:8 - unused_import
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:50:7 - avoid_print
+   info - The private field _inventoryCache could be 'final' - lib\services\inventory_service.dart:75:31 - prefer_final_fields
+warning - The value of the local variable 'price' isn't used - lib\services\inventory_service.dart:94:18 - unused_local_variable
+warning - The value of the local variable 'previousPrice' isn't used - lib\services\inventory_service.dart:95:18 - unused_local_variable
+  error - The argument type 'FlutterBackgroundService' can't be assigned to the parameter type 'ServiceInstance'.  - lib\services\inventory_service.dart:158:48 - argument_type_not_assignable
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:242:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:254:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:268:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:276:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:277:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:293:11 - avoid_print
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:371:7 - undefined_method
+warning - The operand can't be 'null', so the condition is always 'false' - lib\services\inventory_service.dart:376:16 - unnecessary_null_comparison
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:377:7 - undefined_method
+  error - The argument type 'FlutterBackgroundService' can't be assigned to the parameter type 'ServiceInstance'.  - lib\services\inventory_service.dart:385:38 - argument_type_not_assignable
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:394:7 - undefined_method
+  error - The argument type 'FlutterBackgroundService' can't be assigned to the parameter type 'ServiceInstance'.  - lib\services\inventory_service.dart:398:37 - argument_type_not_assignable
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:413:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:415:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:449:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:480:5 - avoid_print
+   info - Unnecessary braces in a string interpolation - lib\services\inventory_service.dart:480:97 - unnecessary_brace_in_string_interps
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:509:13 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:561:18 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:596:15 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:602:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:607:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:611:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:615:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:672:15 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:677:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:684:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:690:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:695:9 - avoid_print
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:702:5 - undefined_method
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:712:7 - undefined_method
+  error - Instance members can't be accessed from a static method - lib\services\inventory_service.dart:715:28 - instance_member_access_from_static
+warning - The operand can't be 'null', so the condition is always 'false' - lib\services\inventory_service.dart:716:18 - unnecessary_null_comparison
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:717:9 - undefined_method
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:735:7 - undefined_method
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:738:7 - undefined_method
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:744:9 - undefined_method
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:750:7 - undefined_method
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:754:9 - undefined_method
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:760:7 - undefined_method
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:787:14 - undefined_method
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:818:7 - undefined_method
+  error - Instance members can't be accessed from a static method - lib\services\inventory_service.dart:819:13 - instance_member_access_from_static
+  error - Instance members can't be accessed from a static method - lib\services\inventory_service.dart:820:13 - instance_member_access_from_static
+  error - Instance members can't be accessed from a static method - lib\services\inventory_service.dart:825:13 - instance_member_access_from_static
+  error - Instance members can't be accessed from a static method - lib\services\inventory_service.dart:828:13 - instance_member_access_from_static
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:830:7 - undefined_method
+  error - The method 'logLine' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:834:7 - undefined_method
+   info - Don't invoke 'print' in production code - lib\services\local_storage_service.dart:24:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\local_storage_service.dart:35:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:74:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:104:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:144:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:145:5 - avoid_print
+

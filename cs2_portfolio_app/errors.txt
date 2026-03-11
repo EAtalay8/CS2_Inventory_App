@@ -1,0 +1,64 @@
+﻿Analyzing cs2_portfolio_app...                                  
+
+   info - 'activeColor' is deprecated and shouldn't be used. Use activeThumbColor instead. This feature was deprecated after v3.31.0-2.0.pre - lib\main.dart:142:21 - deprecated_member_use
+warning - The value of the local variable 'canUpdatePrices' isn't used - lib\main.dart:390:10 - unused_local_variable
+warning - The value of the local variable 'timeUntilNextUpdate' isn't used - lib\main.dart:391:15 - unused_local_variable
+warning - Unused import: 'package:flutter/material.dart' - lib\services\background_service.dart:3:8 - unused_import
+warning - The operand can't be 'null', so the condition is always 'true' - lib\services\background_service.dart:70:19 - unnecessary_null_comparison
+  error - The method 'executeSteamUpdateInIsolate' isn't defined for the type 'InventoryService' - lib\services\background_service.dart:73:30 - undefined_method
+warning - Unused import: 'background_service.dart' - lib\services\inventory_service.dart:8:8 - unused_import
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:50:7 - avoid_print
+   info - The private field _dataLoaded could be 'final' - lib\services\inventory_service.dart:66:15 - prefer_final_fields
+warning - The value of the field '_dataLoaded' isn't used - lib\services\inventory_service.dart:66:15 - unused_field
+   info - The private field _inventoryCache could be 'final' - lib\services\inventory_service.dart:79:31 - prefer_final_fields
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:258:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:270:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:284:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:292:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:293:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:309:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:390:7 - avoid_print
+warning - The operand can't be 'null', so the condition is always 'false' - lib\services\inventory_service.dart:396:16 - unnecessary_null_comparison
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:397:7 - avoid_print
+  error - The argument type 'FlutterBackgroundService' can't be assigned to the parameter type 'ServiceInstance'.  - lib\services\inventory_service.dart:408:46 - argument_type_not_assignable
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:417:7 - avoid_print
+  error - The method '_updatePricesFromBPInBackground' isn't defined for the type 'InventoryService' - lib\services\inventory_service.dart:427:13 - undefined_method
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:445:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:447:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:481:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:512:5 - avoid_print
+   info - Unnecessary braces in a string interpolation - lib\services\inventory_service.dart:512:97 - unnecessary_brace_in_string_interps
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:541:13 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:593:18 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:628:15 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:634:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:639:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:643:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:647:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:704:15 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:709:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:716:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:722:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:727:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:734:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:744:7 - avoid_print
+warning - The operand can't be 'null', so the condition is always 'false' - lib\services\inventory_service.dart:748:18 - unnecessary_null_comparison
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:749:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:767:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:770:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:776:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:782:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:786:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:792:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:819:14 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:850:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:862:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:866:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\local_storage_service.dart:24:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\local_storage_service.dart:35:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:74:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:104:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:144:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:145:5 - avoid_print
+warning - Unused import: 'dart:math' - lib\widgets\portfolio_chart.dart:3:8 - unused_import
+

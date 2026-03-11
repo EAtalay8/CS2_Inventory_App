@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'dart:ui';
-import 'package:flutter/material.dart';
 import 'package:flutter_background_service/flutter_background_service.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
@@ -45,41 +44,41 @@ class BackgroundService {
       ),
     );
   }
+}
 
-  @pragma('vm:entry-point')
-  static Future<bool> onIosBackground(ServiceInstance service) async {
-    return true;
-  }
+@pragma('vm:entry-point')
+Future<bool> onIosBackground(ServiceInstance service) async {
+  return true;
+}
 
-  @pragma('vm:entry-point')
-  static void onStart(ServiceInstance service) async {
-    // Only available for flutter 3.0.0 and later
-    DartPluginRegistrant.ensureInitialized();
+@pragma('vm:entry-point')
+void onStart(ServiceInstance service) async {
+  // Only available for flutter 3.0.0 and later
+  DartPluginRegistrant.ensureInitialized();
 
-    // Listen for events from the UI
-    service.on('stopService').listen((event) {
-      service.stopSelf();
-    });
+  // Listen for events from the UI
+  service.on('stopService').listen((event) {
+    service.stopSelf();
+  });
 
-    service.on('updateNotification').listen((event) {
-      if (event != null) {
-        String content = event['content'] ?? 'Updating...';
-        
-        // Update the notification
-        FlutterLocalNotificationsPlugin().show(
-          888,
-          'CS2 Portfolio',
-          content,
-          const NotificationDetails(
-            android: AndroidNotificationDetails(
-              'cs2_portfolio_service',
-              'CS2 Portfolio Service',
-              icon: 'ic_bg_service_small',
-              ongoing: true,
-            ),
+  service.on('updateNotification').listen((event) {
+    if (event != null) {
+      String content = event['content'] ?? 'Updating...';
+      
+      // Update the notification
+      FlutterLocalNotificationsPlugin().show(
+        888,
+        'CS2 Portfolio',
+        content,
+        const NotificationDetails(
+          android: AndroidNotificationDetails(
+            'cs2_portfolio_service',
+            'CS2 Portfolio Service',
+            icon: 'ic_bg_service_small',
+            ongoing: true,
           ),
-        );
-      }
-    });
-  }
+        ),
+      );
+    }
+  });
 }

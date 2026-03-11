@@ -1,0 +1,57 @@
+Analyzing cs2_portfolio_app...                                  
+
+  error - The named parameter 'price' isn't defined - lib\inventory_page.dart:436:19 - undefined_named_parameter
+  error - The named parameter 'price' isn't defined - lib\inventory_page.dart:504:19 - undefined_named_parameter
+warning - Dead code - lib\main.dart:428:23 - dead_code
+warning - Dead code - lib\main.dart:428:65 - dead_code
+warning - Dead code - lib\main.dart:428:98 - dead_code
+warning - Dead code - lib\main.dart:431:76 - dead_code
+warning - Dead code - lib\main.dart:436:23 - dead_code
+warning - Unused import: 'package:flutter/material.dart' - lib\services\background_service.dart:3:8 - unused_import
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:50:7 - avoid_print
+   info - The private field _inventoryCache could be 'final' - lib\services\inventory_service.dart:75:31 - prefer_final_fields
+  error - The named parameter 'price' isn't defined - lib\services\inventory_service.dart:123:12 - undefined_named_parameter
+  error - The named parameter 'previousPrice' isn't defined - lib\services\inventory_service.dart:124:12 - undefined_named_parameter
+  error - Undefined name 'steamPrice' - lib\services\inventory_service.dart:125:24 - undefined_identifier
+  error - Undefined name 'steamPrevPrice' - lib\services\inventory_service.dart:126:32 - undefined_identifier
+  error - Undefined name 'bpPrice' - lib\services\inventory_service.dart:127:21 - undefined_identifier
+  error - Undefined name 'bpPrevPrice' - lib\services\inventory_service.dart:128:29 - undefined_identifier
+  error - A value of type 'num?' can't be assigned to a variable of type 'double?' - lib\services\inventory_service.dart:180:32 - invalid_assignment
+  error - A value of type 'num?' can't be assigned to a variable of type 'double?' - lib\services\inventory_service.dart:181:36 - invalid_assignment
+  error - A value of type 'num?' can't be assigned to a variable of type 'double?' - lib\services\inventory_service.dart:182:29 - invalid_assignment
+  error - A value of type 'num?' can't be assigned to a variable of type 'double?' - lib\services\inventory_service.dart:183:33 - invalid_assignment
+  error - The named parameter 'price' isn't defined - lib\services\inventory_service.dart:205:13 - undefined_named_parameter
+  error - The named parameter 'previousPrice' isn't defined - lib\services\inventory_service.dart:205:27 - undefined_named_parameter
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:244:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:256:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:270:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:278:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:279:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:295:11 - avoid_print
+  error - The named parameter 'price' isn't defined - lib\services\inventory_service.dart:349:10 - undefined_named_parameter
+  error - The named parameter 'previousPrice' isn't defined - lib\services\inventory_service.dart:350:10 - undefined_named_parameter
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:388:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:390:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:424:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:455:5 - avoid_print
+   info - Unnecessary braces in a string interpolation - lib\services\inventory_service.dart:455:97 - unnecessary_brace_in_string_interps
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:484:13 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:536:18 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:571:15 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:577:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:582:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:586:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:590:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:647:15 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:652:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:659:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:665:11 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:670:9 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\inventory_service.dart:677:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\local_storage_service.dart:24:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\local_storage_service.dart:35:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:74:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:104:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:144:5 - avoid_print
+   info - Don't invoke 'print' in production code - lib\steam_login_page.dart:145:5 - avoid_print
+

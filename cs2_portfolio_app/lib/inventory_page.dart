@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../services/inventory_service.dart';
 import '../models/inventory_item.dart';
 import 'item_detail_page.dart';
@@ -14,17 +15,23 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
   double? customProfit,
   double? customProfitPercent,
   int? trackedCount, // 🔥 New parameter
+  bool showBothPrices = false,
+  String activePriceSource = 'steam',
 }) {
   double? profitLoss;
   double? profitPercent;
   Color profitColor = Colors.grey;
 
+  double? activePrice = activePriceSource == 'steam' ? item.steamPrice : item.bpPrice;
+  double? fallbackPrice = item.steamPrice ?? item.bpPrice;
+  double? displayPrice = activePrice ?? fallbackPrice;
+
   if (customProfit != null && customProfitPercent != null) {
     profitLoss = customProfit;
     profitPercent = customProfitPercent;
     profitColor = profitLoss >= 0 ? Colors.green : Colors.red;
-  } else if (item.price != null && item.purchasePrice != null && item.purchasePrice! > 0) {
-    profitLoss = item.price! - item.purchasePrice!;
+  } else if (displayPrice != null && item.purchasePrice != null && item.purchasePrice! > 0) {
+    profitLoss = displayPrice - item.purchasePrice!;
     profitPercent = (profitLoss / item.purchasePrice!) * 100;
     profitColor = profitLoss >= 0 ? Colors.green : Colors.red;
   }
@@ -86,27 +93,37 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
                       const SizedBox(height: 4),
 
                       // 🔥 PRICE & PROFIT
-                      if (item.price != null) ...[
+                      if (showBothPrices) ...[
+                         if (item.steamPrice != null)
+                           Text("\$${item.steamPrice!.toStringAsFixed(2)}", textAlign: TextAlign.center, style: TextStyle(color: Colors.lightBlue[300], fontSize: 11, fontWeight: FontWeight.bold)),
+                         if (item.bpPrice != null)
+                           Text("\$${item.bpPrice!.toStringAsFixed(2)}", textAlign: TextAlign.center, style: TextStyle(color: Colors.amber[400], fontSize: 11, fontWeight: FontWeight.bold)),
+                         if (item.steamPrice == null && item.bpPrice == null)
+                           const Text("-", style: TextStyle(color: Colors.grey)),
+                      ] else ...[
+                         if (displayPrice != null)
+                           Text(
+                             "\$${displayPrice.toStringAsFixed(2)}",
+                             textAlign: TextAlign.center,
+                             style: TextStyle(
+                               color: activePriceSource == 'steam' ? Colors.lightBlue[300] : Colors.amber[400],
+                               fontSize: 12,
+                               fontWeight: FontWeight.bold,
+                             ),
+                           )
+                         else
+                           const Text("-", style: TextStyle(color: Colors.grey)),
+                      ],
+
+                      if (profitLoss != null)
                         Text(
-                          "\$${item.price!.toStringAsFixed(2)}",
+                          getProfitText(),
                           textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
+                          style: TextStyle(
+                            color: profitColor,
+                            fontSize: 10,
                           ),
                         ),
-                        if (profitLoss != null)
-                          Text(
-                            getProfitText(),
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: profitColor,
-                              fontSize: 10,
-                            ),
-                          ),
-                      ] else
-                        const Text("-", style: TextStyle(color: Colors.grey)),
                     ],
                   )
                 : ListTile(
@@ -125,15 +142,25 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
                         // 🔥 PRICE & PROFIT
                         Row(
                           children: [
-                            Text(
-                              item.price != null
-                                ? "\$${item.price!.toStringAsFixed(2)}"
-                                : "-",
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                            if (showBothPrices) ...[
+                               if (item.steamPrice != null)
+                                 Text("\$${item.steamPrice!.toStringAsFixed(2)}", style: TextStyle(color: Colors.lightBlue[300], fontWeight: FontWeight.bold, fontSize: 13)),
+                               if (item.steamPrice != null && item.bpPrice != null)
+                                 const Text(" | ", style: TextStyle(color: Colors.grey)),
+                               if (item.bpPrice != null)
+                                 Text("\$${item.bpPrice!.toStringAsFixed(2)}", style: TextStyle(color: Colors.amber[400], fontWeight: FontWeight.bold, fontSize: 13)),
+                               if (item.steamPrice == null && item.bpPrice == null)
+                                 const Text("-", style: TextStyle(fontWeight: FontWeight.bold)),
+                            ] else ...[
+                               Text(
+                                 displayPrice != null ? "\$${displayPrice.toStringAsFixed(2)}" : "-",
+                                 style: TextStyle(
+                                   color: activePriceSource == 'steam' ? Colors.lightBlue[300] : Colors.amber[400],
+                                   fontWeight: FontWeight.bold,
+                                 ),
+                               ),
+                            ],
+                            
                             if (profitLoss != null) ...[
                               const SizedBox(width: 8),
                               Text(
@@ -201,11 +228,25 @@ class _InventoryPageState extends State<InventoryPage> {
   bool loading = true;
   bool isGrid = false;
   SortOption currentSort = SortOption.valueHighToLow; // Default sort
+  
+  bool showBothPrices = false;
+  String activePriceSource = 'steam';
 
   @override
   void initState() {
     super.initState();
-    loadInventory();
+    _loadSettingsAndInventory();
+  }
+
+  Future<void> _loadSettingsAndInventory() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+         showBothPrices = prefs.getBool('showBothPrices') ?? false;
+         activePriceSource = prefs.getString('activePriceSource') ?? 'steam';
+      });
+    }
+    await loadInventory();
   }
 
   Future<void> loadInventory() async {
@@ -256,6 +297,13 @@ class _InventoryPageState extends State<InventoryPage> {
     }
   }
 
+  double _getItemPrice(InventoryItem item) {
+    if (showBothPrices) {
+      return (item.steamPrice ?? item.bpPrice ?? 0);
+    }
+    return (activePriceSource == 'steam' ? item.steamPrice : item.bpPrice) ?? (item.steamPrice ?? item.bpPrice ?? 0);
+  }
+
   List<String> getSortedKeys() {
     final keys = groupedItems.keys.toList();
 
@@ -266,8 +314,8 @@ class _InventoryPageState extends State<InventoryPage> {
       final itemA = groupA.first;
       final itemB = groupB.first;
 
-      final priceA = itemA.price ?? 0;
-      final priceB = itemB.price ?? 0;
+      final priceA = _getItemPrice(itemA);
+      final priceB = _getItemPrice(itemB);
       
       final countA = groupA.length;
       final countB = groupB.length;
@@ -320,7 +368,7 @@ class _InventoryPageState extends State<InventoryPage> {
                     controller: scrollController,
                     itemCount: groupItems.length,
                     itemBuilder: (context, index) {
-                      return buildItemCard(context, groupItems[index], isGrid: false, isGroup: false);
+                      return buildItemCard(context, groupItems[index], isGrid: false, isGroup: false, showBothPrices: showBothPrices, activePriceSource: activePriceSource);
                     },
                   ),
                 ),
@@ -397,30 +445,37 @@ class _InventoryPageState extends State<InventoryPage> {
               final group = groupedItems[key]!;
               
               // Calculate summary stats
-              double totalCurrentPrice = 0;
+              double totalSteamPrice = 0;
+              double totalBpPrice = 0;
               double totalTrackedProfit = 0;
+              double sumActiveCurrentPrice = 0;
               int trackedCount = 0;
 
               for (var item in group) {
-                  if (item.price != null) {
-                    totalCurrentPrice += item.price!;
+                  if (item.steamPrice != null) totalSteamPrice += item.steamPrice!;
+                  if (item.bpPrice != null) totalBpPrice += item.bpPrice!;
+                  
+                  double? activePrice = activePriceSource == 'steam' ? item.steamPrice : item.bpPrice;
+                  activePrice ??= item.steamPrice ?? item.bpPrice;
+                  
+                  if (activePrice != null) {
+                    sumActiveCurrentPrice += activePrice;
                   }
-                  if (item.price != null && item.purchasePrice != null) {
-                      totalTrackedProfit += (item.price! - item.purchasePrice!);
+                  
+                  if (activePrice != null && item.purchasePrice != null) {
+                      totalTrackedProfit += (activePrice - item.purchasePrice!);
                       trackedCount++;
                   }
               }
               
               // Logic: Diluted ROI
-              // Assume untracked items are break-even (Cost = Price)
-              // Implied Cost = Total Value - Tracked Profit
               double? calculatedProfit;
               double? calculatedPercent;
 
-              if (totalCurrentPrice > 0 && trackedCount > 0) {
+              if (sumActiveCurrentPrice > 0 && trackedCount > 0) {
                   calculatedProfit = totalTrackedProfit;
                   
-                  double impliedCost = totalCurrentPrice - totalTrackedProfit;
+                  double impliedCost = sumActiveCurrentPrice - totalTrackedProfit;
                   if (impliedCost > 0) {
                     calculatedPercent = (totalTrackedProfit / impliedCost) * 100;
                   }
@@ -433,7 +488,8 @@ class _InventoryPageState extends State<InventoryPage> {
                   icon: group.first.icon,
                   type: group.first.type,
                   marketable: group.first.marketable,
-                  price: totalCurrentPrice > 0 ? totalCurrentPrice : null,
+                  steamPrice: totalSteamPrice > 0 ? totalSteamPrice : null,
+                  bpPrice: totalBpPrice > 0 ? totalBpPrice : null,
                   purchasePrice: null, 
               );
 
@@ -445,6 +501,8 @@ class _InventoryPageState extends State<InventoryPage> {
                 customProfit: calculatedProfit,
                 customProfitPercent: calculatedPercent,
                 trackedCount: trackedCount, // 🔥 Pass tracked count
+                showBothPrices: showBothPrices,
+                activePriceSource: activePriceSource,
                 onTap: () {
                   if (group.length > 1) {
                     _showGroupDetails(context, key, group);
@@ -465,30 +523,37 @@ class _InventoryPageState extends State<InventoryPage> {
               final group = groupedItems[key]!;
               
               // Calculate summary stats
-              double totalCurrentPrice = 0;
+              double totalSteamPrice = 0;
+              double totalBpPrice = 0;
               double totalTrackedProfit = 0;
+              double sumActiveCurrentPrice = 0;
               int trackedCount = 0;
 
               for (var item in group) {
-                  if (item.price != null) {
-                    totalCurrentPrice += item.price!;
+                  if (item.steamPrice != null) totalSteamPrice += item.steamPrice!;
+                  if (item.bpPrice != null) totalBpPrice += item.bpPrice!;
+                  
+                  double? activePrice = activePriceSource == 'steam' ? item.steamPrice : item.bpPrice;
+                  activePrice ??= item.steamPrice ?? item.bpPrice;
+                  
+                  if (activePrice != null) {
+                    sumActiveCurrentPrice += activePrice;
                   }
-                  if (item.price != null && item.purchasePrice != null) {
-                      totalTrackedProfit += (item.price! - item.purchasePrice!);
+                  
+                  if (activePrice != null && item.purchasePrice != null) {
+                      totalTrackedProfit += (activePrice - item.purchasePrice!);
                       trackedCount++;
                   }
               }
               
               // Logic: Diluted ROI
-              // Assume untracked items are break-even (Cost = Price)
-              // Implied Cost = Total Value - Tracked Profit
               double? calculatedProfit;
               double? calculatedPercent;
 
-              if (totalCurrentPrice > 0 && trackedCount > 0) {
+              if (sumActiveCurrentPrice > 0 && trackedCount > 0) {
                   calculatedProfit = totalTrackedProfit;
                   
-                  double impliedCost = totalCurrentPrice - totalTrackedProfit;
+                  double impliedCost = sumActiveCurrentPrice - totalTrackedProfit;
                   if (impliedCost > 0) {
                     calculatedPercent = (totalTrackedProfit / impliedCost) * 100;
                   }
@@ -501,7 +566,8 @@ class _InventoryPageState extends State<InventoryPage> {
                   icon: group.first.icon,
                   type: group.first.type,
                   marketable: group.first.marketable,
-                  price: totalCurrentPrice > 0 ? totalCurrentPrice : null,
+                  steamPrice: totalSteamPrice > 0 ? totalSteamPrice : null,
+                  bpPrice: totalBpPrice > 0 ? totalBpPrice : null,
                   purchasePrice: null, 
               );
 
@@ -513,6 +579,8 @@ class _InventoryPageState extends State<InventoryPage> {
                 customProfit: calculatedProfit,
                 customProfitPercent: calculatedPercent,
                 trackedCount: trackedCount, // 🔥 Pass tracked count
+                showBothPrices: showBothPrices,
+                activePriceSource: activePriceSource,
                 onTap: () {
                   if (group.length > 1) {
                     _showGroupDetails(context, key, group);

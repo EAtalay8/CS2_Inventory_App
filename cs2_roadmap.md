@@ -54,6 +54,24 @@
 - [x] Ana sayfadaki Top Movers kartlarına tıklanınca `ItemDetailPage`'e gidiyor
 - ~~Market sayfasında `onTap` şu an boş (TODO var)~~ → Tamamlandı (23 Feb 2026)
 
+#### 1.5 Fiyat Güncellemede Akıllı Kategori Gruplaması (Smart Batching)
+**Dosya:** `inventory_service.dart`
+- [ ] Envanterdeki item isimlerini parse ederek silah/kategori çıkarımı yapma (AK-47, M4A4, Case, Sticker vb.)
+- [ ] Her kategori grubu için hedeflenmiş `search/render` batch isteği atma (1 istekte 100 ilgili item)
+- [ ] Phase 2'ye (slow update) kalan item sayısını minimize ederek toplam güncelleme süresini 30 dk'dan 2-3 dk'ya düşürme
+
+#### 1.6 Inventory Sayfası: Hiyerarşik Checkbox Filtresi
+**Dosya:** `inventory_page.dart`
+- [ ] Envanteri kategorilere ayırarak filtreleyebilme (Weapons, Cases, Stickers, Graffitis vb.)
+- [ ] Weapons kategorisi altına alt-kategoriler (AK-47, M4A1-S, AWP vb.) ekleme
+- [ ] Checkbox tabanlı, çoklu seçim yapılabilen bir filtreleme UI (örn: drawer veya modal bottom sheet)
+
+#### 1.7 Uygulama İçi Geliştirici Konsolu (Developer Console)
+**Dosyalar:** `main.dart`, `inventory_service.dart`
+- [ ] "Update Prices" butonu altındaki ilerleme metnini kaldırma
+- [ ] Arka planda çalışan API isteklerini, rate limit hatalarını ve bekleme sürelerini gösteren bir mini terminal UI (Bottom Sheet) ekleme
+- [ ] `InventoryService` içine detaylı log (log stream) yapısı kurma
+
 ---
 
 ### Öncelik 2 — Orta Vadeli (Performans & Özellik)

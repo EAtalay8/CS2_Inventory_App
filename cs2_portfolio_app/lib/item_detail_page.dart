@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'models/inventory_item.dart';
 import 'services/inventory_service.dart';
 import 'widgets/portfolio_chart.dart';
@@ -19,6 +20,8 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
   bool isWatched = false;
   List<Map<String, dynamic>> history = []; // 🔥 History data
   bool loadingHistory = true;
+  bool showBothPrices = false;
+  String activePriceSource = 'steam';
 
   @override
   void initState() {
@@ -28,7 +31,18 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
     if (purchasePrice != null) {
       _priceController.text = purchasePrice.toString();
     }
+    _loadSettings();
     _loadHistory();
+  }
+
+  Future<void> _loadSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+         showBothPrices = prefs.getBool('showBothPrices') ?? false;
+         activePriceSource = prefs.getString('activePriceSource') ?? 'steam';
+      });
+    }
   }
 
   Future<void> _loadHistory() async {
@@ -97,13 +111,16 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentPrice = widget.item.price;
+    double? activePrice = activePriceSource == 'steam' ? widget.item.steamPrice : widget.item.bpPrice;
+    double? fallbackPrice = widget.item.steamPrice ?? widget.item.bpPrice;
+    double? displayPrice = activePrice ?? fallbackPrice;
+
     double? profitLoss;
     double? profitLossPercent;
     Color profitColor = Colors.grey;
 
-    if (currentPrice != null && purchasePrice != null && purchasePrice! > 0) {
-      profitLoss = currentPrice - purchasePrice!;
+    if (displayPrice != null && purchasePrice != null && purchasePrice! > 0) {
+      profitLoss = displayPrice - purchasePrice!;
       profitLossPercent = (profitLoss / purchasePrice!) * 100;
       profitColor = profitLoss >= 0 ? Colors.green : Colors.red;
     }
@@ -177,6 +194,8 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                   : PortfolioChart(
                       history: history,
                       isItemHistory: true, // Use item styling
+                      showBothPrices: showBothPrices,
+                      activePriceSource: activePriceSource,
                     ),
             ),
 
@@ -192,16 +211,40 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
               child: Column(
                 children: [
                   // Current Price
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text("Current Price:", style: TextStyle(fontSize: 16)),
-                      Text(
-                        currentPrice != null ? "\$${currentPrice.toStringAsFixed(2)}" : "Loading...",
-                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-                      ),
-                    ],
-                  ),
+                  if (showBothPrices) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Steam Price:", style: TextStyle(fontSize: 16)),
+                        Text(
+                          widget.item.steamPrice != null ? "\$${widget.item.steamPrice!.toStringAsFixed(2)}" : "-",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.lightBlue[300]),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text("Backpack Price:", style: TextStyle(fontSize: 16)),
+                        Text(
+                          widget.item.bpPrice != null ? "\$${widget.item.bpPrice!.toStringAsFixed(2)}" : "-",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber[400]),
+                        ),
+                      ],
+                    ),
+                  ] else ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text("${activePriceSource == 'steam' ? 'Steam' : 'Backpack'} Price:", style: const TextStyle(fontSize: 16)),
+                        Text(
+                          displayPrice != null ? "\$${displayPrice.toStringAsFixed(2)}" : "-",
+                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: activePriceSource == 'steam' ? Colors.lightBlue[300] : Colors.amber[400]),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 12),
                   
                   // Purchase Price Input
