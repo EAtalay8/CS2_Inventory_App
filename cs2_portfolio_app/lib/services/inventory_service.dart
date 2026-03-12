@@ -78,7 +78,7 @@ class InventoryService {
 
   // Cache for raw inventory items (mimicking server.js inventoryCache)
   static final Map<String, dynamic> _inventoryCache = {};
-  static const int _inventoryCacheTTL = 1000 * 60 * 5; // 5 minutes
+  static const int _inventoryCacheTTL = 1000 * 60 * 30; // 30 minutes
 
   Future<InventoryResult> fetchInventory(String steamId, {bool forceUpdate = false}) async {
     await _loadLocalData();
@@ -263,13 +263,32 @@ class InventoryService {
 
   // Mimics fetchInventory from server.js
   Future<List<InventoryItem>> _fetchRawInventoryFromSteam(String steamId, {bool forceUpdate = false}) async {
-    // Cache Check
+    // 1. Memory Cache Check
     final cached = _inventoryCache[steamId];
     if (!forceUpdate && cached != null) {
       final int time = cached['time'];
       if (DateTime.now().millisecondsSinceEpoch - time < _inventoryCacheTTL) {
-        print("Serving inventory from cache: $steamId");
+        print("Serving inventory from memory cache: $steamId");
         return cached['items'] as List<InventoryItem>;
+      }
+    }
+
+    // 2. Disk Cache Check (New: Prevents network hit on startup if cache exists)
+    if (!forceUpdate) {
+      final diskCache = await _storage.loadData('inventory.json');
+      if (diskCache != null && diskCache['items'] != null && diskCache['time'] != null) {
+        final int time = diskCache['time'];
+        if (DateTime.now().millisecondsSinceEpoch - time < _inventoryCacheTTL) {
+           print("Serving inventory from disk cache: $steamId");
+           final items = (diskCache['items'] as List).map((e) => InventoryItem.fromJson(e)).toList();
+           
+           // Refill memory cache for next call
+           _inventoryCache[steamId] = {
+             'items': items,
+             'time': time
+           };
+           return items;
+        }
       }
     }
 
@@ -289,7 +308,7 @@ class InventoryService {
       
       while (attempts < 3) {
         try {
-          String urlString = "https://steamcommunity.com/inventory/$steamId/730/2?l=english&count=75";
+          String urlString = "https://steamcommunity.com/inventory/$steamId/730/2?l=english&count=500";
           if (startAssetId != null) {
             urlString += "&start_assetid=$startAssetId";
           }

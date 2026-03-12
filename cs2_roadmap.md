@@ -1,5 +1,5 @@
 # CS2 Portfolio App — Roadmap & Sorun Takibi
-*Son Güncelleme: 2026-02-23*
+*Son Güncelleme: 2026-03-12*
 
 ---
 
@@ -54,11 +54,12 @@
 - [x] Ana sayfadaki Top Movers kartlarına tıklanınca `ItemDetailPage`'e gidiyor
 - ~~Market sayfasında `onTap` şu an boş (TODO var)~~ → Tamamlandı (23 Feb 2026)
 
-#### 1.5 Fiyat Güncellemede Akıllı Kategori Gruplaması (Smart Batching)
+#### 1.5 Fiyat Güncellemede Akıllı Kategori Gruplaması (Smart Batching) ✅
 **Dosya:** `inventory_service.dart`
-- [ ] Envanterdeki item isimlerini parse ederek silah/kategori çıkarımı yapma (AK-47, M4A4, Case, Sticker vb.)
-- [ ] Her kategori grubu için hedeflenmiş `search/render` batch isteği atma (1 istekte 100 ilgili item)
-- [ ] Phase 2'ye (slow update) kalan item sayısını minimize ederek toplam güncelleme süresini 30 dk'dan 2-3 dk'ya düşürme
+- [x] Envanterdeki item isimlerini parse ederek silah/kategori çıkarımı yapma (AK-47, M4A4, Case, Sticker vb.)
+- [x] Her kategori grubu için hedeflenmiş `search/render` batch isteği atma (1 istekte 100 ilgili item)
+- [x] Phase 2'ye (slow update) kalan item sayısını minimize ederek toplam güncelleme süresini optimize etme
+- **Not:** Tamamlandı (12 Mar 2026)
 
 #### 1.6 Inventory Sayfası: Hiyerarşik Checkbox Filtresi
 **Dosya:** `inventory_page.dart`
@@ -72,16 +73,25 @@
 - [ ] Arka planda çalışan API isteklerini, rate limit hatalarını ve bekleme sürelerini gösteren bir mini terminal UI (Bottom Sheet) ekleme
 - [ ] `InventoryService` içine detaylı log (log stream) yapısı kurma
 
+#### 1.8 UI/UX: Rarity & Dual Price Görünümü ✅
+**Dosyalar:** `inventory_page.dart`, `rarity_color_service.dart`
+- [x] Item kartlarına CS2 nadirlik renkleri eklendi
+- [x] Hem Steam hem Skinport fiyatlarını aynı anda gösterme desteği
+- [x] Aktif fiyat kaynağı seçimi (SharedPreferences ile kalıcı)
+- [x] Gruplanmış itemler için geliştirilmiş kar/zarar (ROI) hesabı
+- **Not:** Tamamlandı (12 Mar 2026)
+
 ---
 
 ### Öncelik 2 — Orta Vadeli (Performans & Özellik)
 
-#### 2.1 Fiyat Güncelleme Hızı İyileştirmesi
+#### 2.1 Fiyat Güncelleme Hızı İyileştirmesi ✅
 **Dosya:** `inventory_service.dart`
-- [ ] Yeni `search/render` toplu çekim motoru entegre edilecek
-- [ ] Itemleri 100'lük paketler halinde (max 200) saniyeler içinde güncelliyor
-- [ ] Eksik kalan nadir itemler için otomatik tekli fallback eklendi
-- Not: Geliştirme aşamasında. (23 Feb 2026)
+- [x] Yeni `search/render` toplu çekim motoru entegre edildi
+- [x] Skinport (Backpack) API entegrasyonu ile 20.000+ item saniyeler içinde güncelleniyor
+- [x] Brotli sıkıştırma desteği ile hızlı veri transferi sağlandı
+- [x] Eksik kalan nadir itemler için otomatik tekli fallback eklendi
+- **Not:** Tamamlandı (12 Mar 2026)
 
 #### 2.2 Market Sayfası: Zaman Aralığı Filtresi ✅
 **Dosya:** `market_page.dart`, `inventory_service.dart`
