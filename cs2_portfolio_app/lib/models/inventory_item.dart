@@ -111,10 +111,21 @@ class InventoryItem {
     return "Others";
   }
 
+  static const List<String> _knifeNames = [
+    'Karambit', 'Bayonet', 'M9 Bayonet', 'Butterfly Knife', 'Flip Knife',
+    'Gut Knife', 'Huntsman Knife', 'Falchion Knife', 'Shadow Daggers',
+    'Bowie Knife', 'Navaja Knife', 'Stiletto Knife', 'Talon Knife',
+    'Ursus Knife', 'Classic Knife', 'Paracord Knife', 'Survival Knife',
+    'Nomad Knife', 'Skeleton Knife', 'Kukri Knife',
+  ];
+
+  static const List<String> _gloveNames = [
+    'Sport Gloves', 'Specialist Gloves', 'Driver Gloves', 'Hand Wraps',
+    'Moto Gloves', 'Hydra Gloves', 'Broken Fang Gloves',
+  ];
+
   String get subCategory {
     if (category == "Weapons") {
-      // "AK-47 | Redline (Field-Tested)" -> "AK-47"
-      // "StatTrak™ M4A4 | Howl (Factory New)" -> "M4A4"
       String wpnName = name.split(" | ").first.trim();
       if (wpnName.startsWith("StatTrak™ ")) {
         wpnName = wpnName.replaceFirst("StatTrak™ ", "");
@@ -122,8 +133,24 @@ class InventoryItem {
       if (wpnName.startsWith("Souvenir ")) {
         wpnName = wpnName.replaceFirst("Souvenir ", "");
       }
+      if (wpnName.startsWith("★ ")) {
+        wpnName = wpnName.replaceFirst("★ ", "");
+      }
+      if (wpnName.startsWith("★ StatTrak™ ")) {
+        wpnName = wpnName.replaceFirst("★ StatTrak™ ", "");
+      }
+
+      // Check if it's a knife
+      for (var knife in _knifeNames) {
+        if (wpnName == knife) return "Knives";
+      }
+      // Check if it's gloves
+      for (var glove in _gloveNames) {
+        if (wpnName == glove) return "Gloves";
+      }
+
       return wpnName;
     }
-    return category; // For non-weapons, the subcategory is just the category itself
+    return category;
   }
 }
