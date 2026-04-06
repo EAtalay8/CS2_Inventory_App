@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../services/inventory_service.dart';
 import '../models/inventory_item.dart';
@@ -14,7 +14,7 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
   bool isGroup = true,
   double? customProfit,
   double? customProfitPercent,
-  int? trackedCount, // 🔥 New parameter
+  int? trackedCount, // ğŸ”¥ New parameter
   bool showBothPrices = false,
   String activePriceSource = 'steam',
 }) {
@@ -22,8 +22,8 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
   double? profitPercent;
   Color profitColor = Colors.grey;
 
-  double? activePrice = activePriceSource == 'steam' ? item.steamPrice : item.bpPrice;
-  double? fallbackPrice = item.steamPrice ?? item.bpPrice;
+  double? activePrice = activePriceSource == 'steam' ? item.steamPrice : item.skinportPrice;
+  double? fallbackPrice = item.steamPrice ?? item.skinportPrice;
   double? displayPrice = activePrice ?? fallbackPrice;
 
   if (customProfit != null && customProfitPercent != null) {
@@ -149,9 +149,9 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
                                     "\$${item.steamPrice!.toStringAsFixed(2)}",
                                     style: TextStyle(color: Colors.lightBlue[200], fontSize: 12, fontWeight: FontWeight.bold),
                                   ),
-                                if (item.bpPrice != null && activePriceSource != 'bp')
+                                if (item.skinportPrice != null && activePriceSource != 'skinport')
                                   Text(
-                                    "\$${item.bpPrice!.toStringAsFixed(2)}",
+                                    "\$${item.skinportPrice!.toStringAsFixed(2)}",
                                     style: TextStyle(color: Colors.amber[300], fontSize: 12, fontWeight: FontWeight.bold),
                                   ),
                               ],
@@ -213,9 +213,9 @@ Widget buildItemCard(BuildContext context, InventoryItem item, {
                                           "\$${item.steamPrice!.toStringAsFixed(2)}",
                                           style: TextStyle(color: Colors.lightBlue[200], fontWeight: FontWeight.bold, fontSize: 14),
                                         ),
-                                      if (item.bpPrice != null && activePriceSource != 'bp')
+                                      if (item.skinportPrice != null && activePriceSource != 'skinport')
                                         Text(
-                                          "\$${item.bpPrice!.toStringAsFixed(2)}",
+                                          "\$${item.skinportPrice!.toStringAsFixed(2)}",
                                           style: TextStyle(color: Colors.amber[300], fontWeight: FontWeight.bold, fontSize: 14),
                                         ),
                                     ],
@@ -271,6 +271,9 @@ enum SortOption {
   priceHighToLow,
   countHighToLow,
   nameAZ,
+  recentlyAdded,
+  profitAmountHighToLow,
+  profitPercentHighToLow,
 }
 
 class InventoryPage extends StatefulWidget {
@@ -364,9 +367,9 @@ class _InventoryPageState extends State<InventoryPage> {
 
   double _getItemPrice(InventoryItem item) {
     if (showBothPrices) {
-      return (item.steamPrice ?? item.bpPrice ?? 0);
+      return (item.steamPrice ?? item.skinportPrice ?? 0);
     }
-    return (activePriceSource == 'steam' ? item.steamPrice : item.bpPrice) ?? (item.steamPrice ?? item.bpPrice ?? 0);
+    return (activePriceSource == 'steam' ? item.steamPrice : item.skinportPrice) ?? (item.steamPrice ?? item.skinportPrice ?? 0);
   }
 
   List<InventoryItem> getFilteredItems() {
@@ -413,6 +416,44 @@ class _InventoryPageState extends State<InventoryPage> {
           return countB.compareTo(countA);
         case SortOption.nameAZ:
           return a.compareTo(b);
+        case SortOption.recentlyAdded:
+          final idA = BigInt.tryParse(itemA.assetid) ?? BigInt.zero;
+          final idB = BigInt.tryParse(itemB.assetid) ?? BigInt.zero;
+          return idB.compareTo(idA);
+        case SortOption.profitAmountHighToLow:
+        case SortOption.profitPercentHighToLow:
+          double totalProfitA = 0;
+          double totalCostA = 0;
+          for (var item in groupA) {
+             double? actA = (activePriceSource == 'steam' ? item.steamPrice : item.skinportPrice) ?? (item.steamPrice ?? item.skinportPrice);
+             if (actA != null && item.purchasePrice != null) {
+                totalProfitA += (actA - item.purchasePrice!);
+                totalCostA += item.purchasePrice!;
+             }
+          }
+          double totalProfitB = 0;
+          double totalCostB = 0;
+          for (var item in groupB) {
+             double? actB = (activePriceSource == 'steam' ? item.steamPrice : item.skinportPrice) ?? (item.steamPrice ?? item.skinportPrice);
+             if (actB != null && item.purchasePrice != null) {
+                totalProfitB += (actB - item.purchasePrice!);
+                totalCostB += item.purchasePrice!;
+             }
+          }
+          
+          if (currentSort == SortOption.profitAmountHighToLow) {
+             if (totalCostA == 0 && totalCostB == 0) return valueB.compareTo(valueA);
+             if (totalCostA == 0) return 1; // Put ones with no cost logic at bottom
+             if (totalCostB == 0) return -1;
+             return totalProfitB.compareTo(totalProfitA);
+          } else {
+             if (totalCostA == 0 && totalCostB == 0) return valueB.compareTo(valueA);
+             if (totalCostA == 0) return 1;
+             if (totalCostB == 0) return -1;
+             double pctA = (totalProfitA / totalCostA) * 100;
+             double pctB = (totalProfitB / totalCostB) * 100;
+             return pctB.compareTo(pctA);
+          }
       }
     });
 
@@ -653,6 +694,18 @@ class _InventoryPageState extends State<InventoryPage> {
                 value: SortOption.nameAZ,
                 child: Text('Name (A -> Z)'),
               ),
+              const PopupMenuItem<SortOption>(
+                value: SortOption.recentlyAdded,
+                child: Text('Recently Added'),
+              ),
+              const PopupMenuItem<SortOption>(
+                value: SortOption.profitAmountHighToLow,
+                child: Text('Profit \$ (High -> Low)'),
+              ),
+              const PopupMenuItem<SortOption>(
+                value: SortOption.profitPercentHighToLow,
+                child: Text('Profit % (High -> Low)'),
+              ),
             ],
           ),
           IconButton(
@@ -719,9 +772,9 @@ class _InventoryPageState extends State<InventoryPage> {
 
               for (var item in group) {
                   if (item.steamPrice != null) totalSteamPrice += item.steamPrice!;
-                  if (item.bpPrice != null) totalBpPrice += item.bpPrice!;
+                  if (item.skinportPrice != null) totalBpPrice += item.skinportPrice!;
                   
-                  double? activePrice = (activePriceSource == 'steam' ? item.steamPrice : item.bpPrice) ?? (item.steamPrice ?? item.bpPrice);
+                  double? activePrice = (activePriceSource == 'steam' ? item.steamPrice : item.skinportPrice) ?? (item.steamPrice ?? item.skinportPrice);
                   
                   if (activePrice != null) {
                     sumActiveCurrentPrice += activePrice;
@@ -749,7 +802,7 @@ class _InventoryPageState extends State<InventoryPage> {
                   type: group.first.type,
                   marketable: group.first.marketable,
                   steamPrice: totalSteamPrice > 0 ? totalSteamPrice : null,
-                  bpPrice: totalBpPrice > 0 ? totalBpPrice : null,
+                  skinportPrice: totalBpPrice > 0 ? totalBpPrice : null,
               );
 
               return buildItemCard(
@@ -790,8 +843,8 @@ class _InventoryPageState extends State<InventoryPage> {
 
               for (var item in group) {
                   if (item.steamPrice != null) totalSteamPrice += item.steamPrice!;
-                  if (item.bpPrice != null) totalBpPrice += item.bpPrice!;
-                  double? activePrice = (activePriceSource == 'steam' ? item.steamPrice : item.bpPrice) ?? (item.steamPrice ?? item.bpPrice);
+                  if (item.skinportPrice != null) totalBpPrice += item.skinportPrice!;
+                  double? activePrice = (activePriceSource == 'steam' ? item.steamPrice : item.skinportPrice) ?? (item.steamPrice ?? item.skinportPrice);
                   if (activePrice != null) sumActiveCurrentPrice += activePrice;
                   if (activePrice != null && item.purchasePrice != null) {
                       totalTrackedProfit += (activePrice - item.purchasePrice!);
@@ -815,7 +868,7 @@ class _InventoryPageState extends State<InventoryPage> {
                   type: group.first.type,
                   marketable: group.first.marketable,
                   steamPrice: totalSteamPrice > 0 ? totalSteamPrice : null,
-                  bpPrice: totalBpPrice > 0 ? totalBpPrice : null,
+                  skinportPrice: totalBpPrice > 0 ? totalBpPrice : null,
               );
 
               return buildItemCard(
@@ -845,3 +898,5 @@ class _InventoryPageState extends State<InventoryPage> {
     );
   }
 }
+
+

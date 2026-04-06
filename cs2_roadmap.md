@@ -5,7 +5,24 @@
 
 ## 🔴 Aktif Sorunlar (Bugs)
 
-### 1. WiFi'de Rate Limit Hatası
+### 1. Uygulama Sürekli Duruyor Hatası (Crash)
+**Durum:** 🔴 Yeni
+**Belirtiler:**
+- Telefon her kapatılıp açıldığında uygulama arka planda çöküyor / sürekli duruyor hatası veriyor.
+
+### 2. Müzik Kiti ve Charm Kategorizasyon Hatası
+**Durum:** 🔴 Yeni
+**Belirtiler:**
+- Music kitleri ve charm'lar (anahtarlıklar) envanter/filtreleme kısmında yanlışlıkla "Weapons" (Silahlar) kategorisi altında listeleniyor.
+- Doğru kategoriye taşınmaları gerekiyor.
+
+### 3. Ana Sayfa Grafiği: Geçmiş Veri (Steam/3rd Party Ayrımı Öncesi) Uyumsuzluğu
+**Durum:** 🔴 Yeni
+**Belirtiler:**
+- Steam / 3rd Party (Skinport vb.) fiyat ayrımını yapmadan önceki dönemlerde kaydedilen `history.json` verileri (tek fiyat üzerinden) ana sayfadaki grafikte iki kaynak için de aynı değeri gösteriyor.
+- Detail sayfasındaki grafikte sorun yok ama ana sayfa grafiğinde bu eski verilerin her iki veri kaynağından da aynı fiyatta geliyormuş gibi görünmesi görsel olarak yanıltıcı. Geçmiş tekli verilerin grafik gösteriminde filtreleme veya ayarlama yapılması gerekiyor.
+
+### 4. WiFi'de Rate Limit Hatası
 **Durum:** ✅ Fix uygulandı (23 Feb 2026) — WiFi testi bekleniyor
 **Belirtiler:**
 - WiFi üzerinden "Update Prices" butonuna basılınca Exception/404/Rate Limit hatası.
@@ -30,11 +47,12 @@
 
 ### Öncelik 1 — Kısa Vadeli (Bug Fix & UX)
 
-#### 1.1 Inventory Sayfası: Kar/Zarar Sıralaması
+#### 1.1 Inventory Sayfası: Kar/Zarar ve Öncelik Sıralaması
 **Dosya:** `inventory_page.dart`
+- [ ] **Son Eklenenlere Göre Sıralama (Steam Varsayılan)** — Steam envanteri giriş sırası bazlı
 - [ ] **Kar Miktarına Göre Sıralama** — Toplam $ kar/zarar büyükten küçüğe
 - [ ] **Kar Yüzdesine Göre Sıralama** — ROI % büyükten küçüğe
-- Mevcut `SortOption` enum'una iki yeni seçenek eklenmeli
+- Mevcut `SortOption` enum'una bu yeni seçenekler eklenmeli
 
 #### 1.2 Ana Sayfa: Top Movers Stack Sorunu
 **Dosya:** `main.dart` → `_buildTopMovers()`
@@ -80,6 +98,19 @@
 - [x] Aktif fiyat kaynağı seçimi (SharedPreferences ile kalıcı)
 - [x] Gruplanmış itemler için geliştirilmiş kar/zarar (ROI) hesabı
 - **Not:** Tamamlandı (12 Mar 2026)
+
+#### 1.9 Ana Sayfa: Son Güncelleme Tarihi Bilgisi (Info Tooltip)
+**Dosya:** `main.dart`
+- [ ] Toplam fiyat göstergelerinin (Steam ve 3rd Party) yanına küçük bir yuvarlak `(i)` (information) simgesi konacak.
+- [ ] Bu simgeye basıldığında/tıklandığında her iki fiyat kaynağı için ilgili fiyatların en son güncellendiği saat/tarih kullanıcıya gösterilecek.
+
+#### 1.10 Item Detail Sayfası: Koleksiyon Bilgisi
+**Dosya:** `item_detail_page.dart`
+- [ ] Item (Skin, Kasa vb.) detay ekranında, item'ın ait olduğu "Koleksiyon" adının (Örn: *The Anubis Collection*) gösterilmesi sağlanacak.
+
+#### 1.11 Market Sayfası: Nadirlik Renkleri (Outline)
+**Dosya:** `market_page.dart`
+- [ ] Envanterdeki mevcut nadirlik (rarity) renkleri, market sayfasındaki listelemede kart veya resim outline'ı (çerçeve/border) olarak gösterilecek.
 
 ---
 

@@ -1,8 +1,9 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'models/inventory_item.dart';
 import 'services/inventory_service.dart';
 import 'item_detail_page.dart';
+import 'services/rarity_color_service.dart';
 
 class MarketPage extends StatefulWidget {
   const MarketPage({super.key});
@@ -15,12 +16,13 @@ enum MarketRange { day, week, month, threeMonths }
 
 class _MarketPageState extends State<MarketPage> {
   List<InventoryItem> allItems = []; 
-  List<List<InventoryItem>> filteredGroups = []; // 🔥 Store groups of items
+  List<List<InventoryItem>> filteredGroups = []; // ğŸ”¥ Store groups of items
   double minPriceFilter = 0.50; 
   bool loading = true; 
   
   MarketRange selectedRange = MarketRange.day;
-  Map<String, double?> historicPrices = {}; // Price at the start of the selected range
+  Map<String, Map<String, double?>> historicPrices = {}; // Price at the start of the selected range
+  String marketPriceSource = 'steam'; // 'steam' or 'skinport'
   @override
   void initState() {
     super.initState();
@@ -83,11 +85,10 @@ class _MarketPageState extends State<MarketPage> {
       filteredGroups = groups.values.where((group) {
         if (group.isEmpty) return false;
         
-        // Show group if ANY item is watched OR if price > min
-        // Since they are identical, price is same for all.
-        // But watch status might differ (though ideally should be same for classid, but currently per assetid)
-        
-        bool priceCondition = group.first.price! >= minPriceFilter;
+        double currentPrice = marketPriceSource == 'steam' ? (group.first.steamPrice ?? 0.0) : (group.first.skinportPrice ?? 0.0);
+        if (currentPrice <= 0.0) return false;
+
+        bool priceCondition = currentPrice >= minPriceFilter;
         bool watchCondition = group.any((i) => i.isWatched);
         
         return priceCondition || watchCondition;
@@ -98,15 +99,25 @@ class _MarketPageState extends State<MarketPage> {
         final itemA = a.first;
         final itemB = b.first;
 
-        double basePriceA = selectedRange == MarketRange.day 
-            ? (itemA.previousPrice ?? itemA.price!) 
-            : (historicPrices[itemA.name] ?? itemA.price!);
-        double basePriceB = selectedRange == MarketRange.day 
-            ? (itemB.previousPrice ?? itemB.price!) 
-            : (historicPrices[itemB.name] ?? itemB.price!);
+        double currentPriceA = marketPriceSource == 'steam' ? (itemA.steamPrice ?? 0) : (itemA.skinportPrice ?? 0);
+        double currentPriceB = marketPriceSource == 'steam' ? (itemB.steamPrice ?? 0) : (itemB.skinportPrice ?? 0);
+        
+        double basePriceA;
+        if (selectedRange == MarketRange.day) {
+          basePriceA = marketPriceSource == 'steam' ? (itemA.steamPreviousPrice ?? currentPriceA) : (itemA.skinportPreviousPrice ?? currentPriceA);
+        } else {
+          basePriceA = historicPrices[itemA.name]?[marketPriceSource] ?? currentPriceA;
+        }
 
-        double changeA = (itemA.price! - basePriceA) / (basePriceA > 0 ? basePriceA : 1);
-        double changeB = (itemB.price! - basePriceB) / (basePriceB > 0 ? basePriceB : 1);
+        double basePriceB;
+        if (selectedRange == MarketRange.day) {
+          basePriceB = marketPriceSource == 'steam' ? (itemB.steamPreviousPrice ?? currentPriceB) : (itemB.skinportPreviousPrice ?? currentPriceB);
+        } else {
+          basePriceB = historicPrices[itemB.name]?[marketPriceSource] ?? currentPriceB;
+        }
+
+        double changeA = (currentPriceA - basePriceA) / (basePriceA > 0 ? basePriceA : 1);
+        double changeB = (currentPriceB - basePriceB) / (basePriceB > 0 ? basePriceB : 1);
         
         return changeB.compareTo(changeA);
       });
@@ -122,7 +133,7 @@ class _MarketPageState extends State<MarketPage> {
       ),
       body: Column(
         children: [
-          // 🔥 RANGE & FILTER SECTION
+          // ğŸ”¥ RANGE & FILTER SECTION
           Container(
             padding: const EdgeInsets.all(16),
             color: Colors.black12,
@@ -148,6 +159,30 @@ class _MarketPageState extends State<MarketPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    const Text("Source:", style: TextStyle(fontWeight: FontWeight.bold)),
+                    SegmentedButton<String>(
+                      showSelectedIcon: false,
+                      style: SegmentedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      segments: const [
+                        ButtonSegment(value: 'steam', label: Text('Steam')),
+                        ButtonSegment(value: 'skinport', label: Text('Skinport')),
+                      ],
+                      selected: {marketPriceSource},
+                      onSelectionChanged: (Set<String> newSelection) {
+                        setState(() {
+                          marketPriceSource = newSelection.first;
+                        });
+                        _applyFilter();
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
                     const Text("Min Price Filter:", style: TextStyle(fontWeight: FontWeight.bold)),
                     Text("\$${minPriceFilter.toStringAsFixed(2)}"),
                   ],
@@ -168,14 +203,14 @@ class _MarketPageState extends State<MarketPage> {
                   },
                 ),
                 const Text(
-                  "Items below this price are hidden, unless they are in your Watchlist (⭐).",
+                  "Items below this price are hidden, unless they are in your Watchlist (â­).",
                   style: TextStyle(fontSize: 10, color: Colors.grey),
                 ),
               ],
             ),
           ),
 
-          // 🔥 LIST
+          // ğŸ”¥ LIST
           Expanded(
             child: loading
               ? const Center(child: CircularProgressIndicator())
@@ -195,26 +230,30 @@ class _MarketPageState extends State<MarketPage> {
                         final int count = group.length;
 
                         // Calculate totals for the group
+                        double currentPrice = marketPriceSource == 'steam' ? (item.steamPrice ?? 0) : (item.skinportPrice ?? 0);
                         double basePrice = selectedRange == MarketRange.day 
-                            ? (item.previousPrice ?? item.price!) 
-                            : (historicPrices[item.name] ?? item.price!);
+                            ? (marketPriceSource == 'steam' ? (item.steamPreviousPrice ?? currentPrice) : (item.skinportPreviousPrice ?? currentPrice)) 
+                            : (historicPrices[item.name]?[marketPriceSource] ?? currentPrice);
 
-                        final double singleChange = item.price! - basePrice;
+                        final double singleChange = currentPrice - basePrice;
                         final double totalChange = singleChange * count;
                         final double percent = basePrice > 0 ? (singleChange / basePrice) * 100 : 0;
                         final Color color = singleChange >= 0 ? Colors.greenAccent : Colors.redAccent;
                         
                         final bool isAnyWatched = group.any((i) => i.isWatched);
 
-                        return Card(
+                        final Color rarityColor = getRarityColor(item.rarity);
+
+                        return Container(
                           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                          color: Colors.grey[900],
-                          shape: isAnyWatched 
-                            ? RoundedRectangleBorder(
-                                side: const BorderSide(color: Colors.yellowAccent, width: 1),
-                                borderRadius: BorderRadius.circular(12)
-                              ) 
-                            : null,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF232323),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isAnyWatched ? Colors.yellowAccent : rarityColor.withOpacity(0.5),
+                              width: isAnyWatched ? 2.0 : 1.5,
+                            ),
+                          ),
                           child: ListTile(
                             leading: Stack(
                               children: [
@@ -256,8 +295,8 @@ class _MarketPageState extends State<MarketPage> {
                             ),
                             subtitle: Text(
                               selectedRange == MarketRange.day
-                                ? "Prev: \$${(item.previousPrice ?? item.price!).toStringAsFixed(2)} -> Now: \$${item.price!.toStringAsFixed(2)}"
-                                : "Start: \$${(historicPrices[item.name] ?? item.price!).toStringAsFixed(2)} -> Now: \$${item.price!.toStringAsFixed(2)}",
+                                ? "Prev: \$${(marketPriceSource == 'steam' ? (item.steamPreviousPrice ?? currentPrice) : (item.skinportPreviousPrice ?? currentPrice)).toStringAsFixed(2)} -> Now: \$${currentPrice.toStringAsFixed(2)}"
+                                : "Start: \$${(historicPrices[item.name]?[marketPriceSource] ?? currentPrice).toStringAsFixed(2)} -> Now: \$${currentPrice.toStringAsFixed(2)}",
                               style: const TextStyle(color: Colors.grey, fontSize: 12),
                             ),
                             trailing: Column(
@@ -299,3 +338,5 @@ class _MarketPageState extends State<MarketPage> {
     );
   }
 }
+
+

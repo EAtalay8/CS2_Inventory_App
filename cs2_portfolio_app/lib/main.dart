@@ -1,4 +1,4 @@
-import 'dart:io';
+﻿import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'inventory_page.dart';
@@ -11,7 +11,7 @@ import 'item_detail_page.dart';
 
 import 'services/background_service.dart';
 
-// 🔥 Global Override for SSL Certificate Handshake errors on Emulators
+// ğŸ”¥ Global Override for SSL Certificate Handshake errors on Emulators
 class MyHttpOverrides extends HttpOverrides {
   @override
   HttpClient createHttpClient(SecurityContext? context) {
@@ -60,6 +60,7 @@ class _HomePageState extends State<HomePage> {
   bool loading = true;
   DateTime? lastRefreshTime;
   DateTime? lastPriceRefresh;
+  DateTime? lastSkinportPriceRefresh;
   List<InventoryItem> items = []; // Store items for Top Movers
   List<Map<String, dynamic>> history = [];
   String? steamId;
@@ -67,18 +68,20 @@ class _HomePageState extends State<HomePage> {
 
   String updateProgress = ""; // Store "5/285"
 
-  // 🔥 Dual Pricing State
+  // ğŸ”¥ Dual Pricing State
   bool showBothPrices = false;
-  String activePriceSource = 'steam'; // 'steam' or 'bp'
+  String activePriceSource = 'steam'; // 'steam' or 'skinport'
+
+  String topMoversSource = 'steam'; // 'steam' or 'skinport'
 
   // Dynamic getters to replace the old static variables
   double get totalValueSteam {
     return items.fold(0.0, (sum, item) => sum + (item.steamPrice ?? 0.0));
   }
-  double get totalValueBp {
-    return items.fold(0.0, (sum, item) => sum + (item.bpPrice ?? 0.0));
+  double get totalValueSkinport {
+    return items.fold(0.0, (sum, item) => sum + (item.skinportPrice ?? 0.0));
   }
-  double get activeTotalValue => activePriceSource == 'steam' ? totalValueSteam : totalValueBp;
+  double get activeTotalValue => activePriceSource == 'steam' ? totalValueSteam : totalValueSkinport;
 
   double get activeTotalValueForProfitCalc {
     double total = 0;
@@ -86,8 +89,8 @@ class _HomePageState extends State<HomePage> {
       if (item.purchasePrice != null && item.purchasePrice! > 0) {
         if (activePriceSource == 'steam' && item.steamPrice != null) {
           total += item.steamPrice!;
-        } else if (activePriceSource == 'bp' && item.bpPrice != null) {
-          total += item.bpPrice!;
+        } else if (activePriceSource == 'skinport' && item.skinportPrice != null) {
+          total += item.skinportPrice!;
         }
       }
     }
@@ -165,7 +168,7 @@ class _HomePageState extends State<HomePage> {
                     SegmentedButton<String>(
                       segments: const [
                         ButtonSegment(value: 'steam', label: Text('Steam')),
-                        ButtonSegment(value: 'bp', label: Text('Backpack')),
+                        ButtonSegment(value: 'skinport', label: Text('Skinport')),
                       ],
                       selected: {activePriceSource},
                       onSelectionChanged: (Set<String> newSelection) async {
@@ -226,6 +229,9 @@ class _HomePageState extends State<HomePage> {
           if (result.lastPriceRefresh != null) {
             lastPriceRefresh = result.lastPriceRefresh;
           }
+          if (result.lastSkinportPriceRefresh != null) {
+            lastSkinportPriceRefresh = result.lastSkinportPriceRefresh;
+          }
           history = historyData;
         });
 
@@ -257,18 +263,17 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Widget _buildTopMovers() {
-    // Filter items with price and previousPrice
-    final marketItems = items.where((i) => 
-      i.price != null && 
-      i.previousPrice != null && 
-      i.previousPrice! > 0 &&
-      i.price! >= minPriceFilter
-    ).toList();
+  Widget _buildTopMoversList(String source) {
+    final marketItems = items.where((i) {
+      if (source == 'steam') {
+         return i.steamPrice != null && i.steamPreviousPrice != null && i.steamPreviousPrice! > 0 && i.steamPrice! >= minPriceFilter;
+      } else {
+         return i.skinportPrice != null && i.skinportPreviousPrice != null && i.skinportPreviousPrice! > 0 && i.skinportPrice! >= minPriceFilter;
+      }
+    }).toList();
 
     if (marketItems.isEmpty) return const SizedBox.shrink();
 
-    // Group by classid (identical items)
     Map<String, List<InventoryItem>> groups = {};
     for (var item in marketItems) {
       if (!groups.containsKey(item.classid)) {
@@ -277,110 +282,154 @@ class _HomePageState extends State<HomePage> {
       groups[item.classid]!.add(item);
     }
 
-    // Sort groups by % change (descending)
     final sortedGroups = groups.values.toList();
     sortedGroups.sort((a, b) {
       final itemA = a.first;
       final itemB = b.first;
-      final changeA = (itemA.price! - itemA.previousPrice!) / itemA.previousPrice!;
-      final changeB = (itemB.price! - itemB.previousPrice!) / itemB.previousPrice!;
+
+      final priceA = source == 'steam' ? itemA.steamPrice! : itemA.skinportPrice!;
+      final prevA = source == 'steam' ? itemA.steamPreviousPrice! : itemA.skinportPreviousPrice!;
+      final priceB = source == 'steam' ? itemB.steamPrice! : itemB.skinportPrice!;
+      final prevB = source == 'steam' ? itemB.steamPreviousPrice! : itemB.skinportPreviousPrice!;
+
+      final changeA = (priceA - prevA) / prevA;
+      final changeB = (priceB - prevB) / prevB;
       return changeB.compareTo(changeA);
     });
 
     final top3 = sortedGroups.take(3).toList();
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Daily Top Movers (24h)",
-          style: TextStyle(fontSize: 16, color: Colors.grey),
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 110,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: top3.length,
-            itemBuilder: (context, index) {
-              final group = top3[index];
-              final item = group.first;
-              final int count = group.length;
-              final change = item.price! - item.previousPrice!;
-              final percent = (change / item.previousPrice!) * 100;
-              final isPositive = change >= 0;
+    return ListView.builder(
+      scrollDirection: Axis.horizontal,
+      itemCount: top3.length,
+      itemBuilder: (context, index) {
+        final group = top3[index];
+        final item = group.first;
+        final int count = group.length;
+        
+        final price = source == 'steam' ? item.steamPrice! : item.skinportPrice!;
+        final prev = source == 'steam' ? item.steamPreviousPrice! : item.skinportPreviousPrice!;
 
-              return GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ItemDetailPage(item: item),
-                    ),
-                  );
-                },
-                child: Container(
-                  width: 100,
-                  margin: const EdgeInsets.only(right: 12),
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.white10,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: isPositive ? Colors.greenAccent.withAlpha(77) : Colors.redAccent.withAlpha(77)
-                    ),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          item.icon.isNotEmpty
-                              ? Image.network(item.icon, height: 40)
-                              : const Icon(Icons.image, size: 40),
-                          if (count > 1)
-                            Positioned(
-                              top: -4,
-                              right: -8,
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                decoration: BoxDecoration(
-                                  color: Colors.blueAccent,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  "x$count",
-                                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        item.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: 10),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        "${isPositive ? '+' : ''}${percent.toStringAsFixed(2)}%",
-                        style: TextStyle(
-                          color: isPositive ? Colors.greenAccent : Colors.redAccent,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
+        final change = price - prev;
+        final percent = (change / prev) * 100;
+        final isPositive = change >= 0;
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ItemDetailPage(item: item),
+              ),
+            );
+          },
+          child: Container(
+            width: 100,
+            margin: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white10,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isPositive ? Colors.greenAccent.withAlpha(77) : Colors.redAccent.withAlpha(77)
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    item.icon.isNotEmpty
+                        ? Image.network(item.icon, height: 40)
+                        : const Icon(Icons.image, size: 40),
+                    if (count > 1)
+                      Positioned(
+                        top: -4,
+                        right: -8,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: Colors.blueAccent,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            "x$count",
+                            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
-                    ],
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  item.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: 10),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  "${isPositive ? '+' : ''}${percent.toStringAsFixed(2)}%",
+                  style: TextStyle(
+                    color: isPositive ? Colors.greenAccent : Colors.redAccent,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
                   ),
                 ),
-              );
-            },
+              ],
+            ),
           ),
-        ),
-      ],
+        );
+      },
+    );
+  }
+
+  Widget _buildTopMovers() {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                "Daily Top Movers (24h)",
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              SizedBox(
+                height: 28,
+                width: 130,
+                child: const TabBar(
+                  indicatorColor: Colors.amber,
+                  labelColor: Colors.amber,
+                  unselectedLabelColor: Colors.grey,
+                  indicatorSize: TabBarIndicatorSize.label,
+                  dividerColor: Colors.transparent,
+                  labelPadding: EdgeInsets.zero,
+                  labelStyle: TextStyle(fontSize: 12),
+                  unselectedLabelStyle: TextStyle(fontSize: 12),
+                  tabs: [
+                    Tab(text: "Steam"),
+                    Tab(text: "Skinport"),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 110,
+            child: TabBarView(
+              children: [
+                _buildTopMoversList('steam'),
+                _buildTopMoversList('skinport'),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -418,19 +467,28 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: SingleChildScrollView( // 🔥 Added ScrollView to prevent overflow
+      body: SingleChildScrollView( // ğŸ”¥ Added ScrollView to prevent overflow
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Total portfolio value
-              const Text(
-                "Total Value",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey,
-                ),
+              Row(
+                children: [
+                  const Text(
+                    "Total Value",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.grey,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Tooltip(
+                    message: "Steam Updated: ${lastPriceRefresh != null ? lastPriceRefresh!.toLocal().toString().split('.')[0] : 'Never'}\nSkinport Updated: ${lastSkinportPriceRefresh != null ? lastSkinportPriceRefresh!.toLocal().toString().split('.')[0] : 'Never'}",
+                    child: const Icon(Icons.info_outline, size: 16, color: Colors.grey),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               loading
@@ -465,7 +523,7 @@ class _HomePageState extends State<HomePage> {
                                       const Icon(Icons.flash_on, size: 24, color: Colors.amber),
                                       const SizedBox(width: 6),
                                       Text(
-                                        "\$${totalValueBp.toStringAsFixed(2)}",
+                                        "\$${totalValueSkinport.toStringAsFixed(2)}",
                                         style: TextStyle(
                                           fontSize: 24,
                                           fontWeight: FontWeight.bold,
@@ -498,14 +556,6 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ],
                         ),
-                        if (lastRefreshTime != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4.0),
-                            child: Text(
-                              "Last Refreshed: ${lastRefreshTime!.toLocal().toString().split('.')[0]}",
-                              style: const TextStyle(color: Colors.grey, fontSize: 12),
-                            ),
-                          ),
                       ],
                     ),
 
@@ -543,7 +593,7 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 24),
 
-              // 🔥 CHART
+              // ğŸ”¥ CHART
               Container(
                 height: 200, // Increased height slightly
                 padding: const EdgeInsets.all(16),
@@ -581,17 +631,17 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                   if (showBothPrices) const SizedBox(width: 12),
-                  if (showBothPrices || activePriceSource == 'bp')
+                  if (showBothPrices || activePriceSource == 'skinport')
                     Expanded(
                       child: ElevatedButton.icon(
                         icon: const Icon(Icons.flash_on, size: 18),
-                        label: const Text("Backpack", style: TextStyle(fontSize: 13)),
+                        label: const Text("Skinport", style: TextStyle(fontSize: 13)),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.amber[800],
                           foregroundColor: Colors.white,
                         ),
                         onPressed: () {
-                          InventoryService().updateAllPricesFromBP();
+                          InventoryService().updateAllPricesFromSkinport();
                           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Backpack Instant Update Started")));
                         },
                       ),
@@ -611,7 +661,7 @@ class _HomePageState extends State<HomePage> {
 
               const SizedBox(height: 24),
 
-              // 🔥 TOP MOVERS SECTION
+              // ğŸ”¥ TOP MOVERS SECTION
               if (!loading) _buildTopMovers(),
 
               const SizedBox(height: 24),
@@ -664,3 +714,5 @@ class _HomePageState extends State<HomePage> {
     );
   }
 }
+
+

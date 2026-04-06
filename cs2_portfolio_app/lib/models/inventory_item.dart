@@ -7,15 +7,16 @@ class InventoryItem {
   final int marketable;
   final double? steamPrice;
   final double? steamPreviousPrice;
-  final double? bpPrice;
-  final double? bpPreviousPrice;
+  final double? skinportPrice;
+  final double? skinportPreviousPrice;
   final double? purchasePrice;
+  final String? collection;
   final bool isWatched;
   final DateTime? lastUpdated;
 
   // Convenience getters for UI compatibility
-  double? get price => steamPrice ?? bpPrice;
-  double? get previousPrice => steamPreviousPrice ?? bpPreviousPrice;
+  double? get price => steamPrice ?? skinportPrice;
+  double? get previousPrice => steamPreviousPrice ?? skinportPreviousPrice;
 
   InventoryItem({
     required this.assetid,
@@ -26,9 +27,10 @@ class InventoryItem {
     this.marketable = 1,
     this.steamPrice,
     this.steamPreviousPrice,
-    this.bpPrice,
-    this.bpPreviousPrice,
+    this.skinportPrice,
+    this.skinportPreviousPrice,
     this.purchasePrice,
+    this.collection,
     this.isWatched = false,
     this.lastUpdated,
   });
@@ -49,15 +51,16 @@ class InventoryItem {
       steamPreviousPrice: (json['steam_previous_price'] != null)
           ? double.tryParse(json['steam_previous_price'].toString())
           : null,
-      bpPrice: (json['bp_price'] != null) 
-          ? double.tryParse(json['bp_price'].toString()) 
-          : null,
-      bpPreviousPrice: (json['bp_previous_price'] != null)
-          ? double.tryParse(json['bp_previous_price'].toString())
-          : null,
+      skinportPrice: (json['skinport_price'] != null) 
+          ? double.tryParse(json['skinport_price'].toString()) 
+          : (json['bp_price'] != null) ? double.tryParse(json['bp_price'].toString()) : null,
+      skinportPreviousPrice: (json['skinport_previous_price'] != null)
+          ? double.tryParse(json['skinport_previous_price'].toString())
+          : (json['bp_previous_price'] != null) ? double.tryParse(json['bp_previous_price'].toString()) : null,
       purchasePrice: (json['purchase_price'] != null)
           ? double.tryParse(json['purchase_price'].toString())
           : null,
+      collection: json['collection']?.toString(),
       isWatched: json['is_watched'] == true,
       lastUpdated: json['last_updated'] != null 
           ? DateTime.fromMillisecondsSinceEpoch(json['last_updated']) 
@@ -75,9 +78,10 @@ class InventoryItem {
       "marketable": marketable,
       "steam_price": steamPrice,
       "steam_previous_price": steamPreviousPrice,
-      "bp_price": bpPrice,
-      "bp_previous_price": bpPreviousPrice,
+      "skinport_price": skinportPrice,
+      "skinport_previous_price": skinportPreviousPrice,
       "purchase_price": purchasePrice,
+      "collection": collection,
       "is_watched": isWatched,
       "last_updated": lastUpdated?.millisecondsSinceEpoch,
     };
@@ -99,9 +103,10 @@ class InventoryItem {
   String get category {
     if (name.startsWith("Sticker |")) return "Stickers";
     if (name.startsWith("Sealed Graffiti |")) return "Graffitis";
-    if (name.startsWith("Music Kit |")) return "Music Kits";
+    if (type.contains("Music Kit") || name.contains("Music Kit")) return "Music Kits";
     if (type.contains("Agent")) return "Agents";
-    if (name.contains("Case") || name.contains("Capsule") || name.contains("Package") || name.contains("Souvenir")) return "Containers";
+    if (type.contains("Charm") || name.contains("Charm |")) return "Charms";
+    if (name.contains("Case") || name.contains("Capsule") || name.contains("Package") || name.contains("Terminal")) return "Containers & Terminals";
     if (name.contains("Pin |")) return "Pins";
     if (name.contains("Patch |")) return "Patches";
     
@@ -150,6 +155,10 @@ class InventoryItem {
       }
 
       return wpnName;
+    }
+    if (category == "Containers & Terminals") {
+      if (name.contains("Terminal")) return "Terminals";
+      return "Containers";
     }
     return category;
   }

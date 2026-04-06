@@ -24,30 +24,30 @@ class PortfolioChart extends StatelessWidget {
     }
 
     final pointsSteam = <FlSpot>[];
-    final pointsBp = <FlSpot>[];
+    final pointsSkinport = <FlSpot>[];
 
     for (var e in history) {
       final time = (e['time'] as int).toDouble();
       
       if (isItemHistory) {
          double? steamVal = e['steam_price'] != null ? (e['steam_price'] as num).toDouble() : null;
-         double? bpVal = e['bp_price'] != null ? (e['bp_price'] as num).toDouble() : null;
+         double? skinportVal = (e['skinport_price'] ?? e['bp_price']) != null ? ((e['skinport_price'] ?? e['bp_price']) as num).toDouble() : null;
          
          // Legacy fallback
          double? legacyPrice = e['price'] != null ? (e['price'] as num).toDouble() : null;
-         if (steamVal == null && bpVal == null && legacyPrice != null) {
+         if (steamVal == null && skinportVal == null && legacyPrice != null) {
             steamVal = legacyPrice;
          }
 
          if (steamVal != null) pointsSteam.add(FlSpot(time, steamVal));
-         if (bpVal != null) pointsBp.add(FlSpot(time, bpVal));
+         if (skinportVal != null) pointsSkinport.add(FlSpot(time, skinportVal));
       } else {
          double? legacyValue = e['value'] != null ? (e['value'] as num).toDouble() : null;
          double? steamVal = e['steam_value'] != null ? (e['steam_value'] as num).toDouble() : legacyValue;
-         double? bpVal = e['bp_value'] != null ? (e['bp_value'] as num).toDouble() : legacyValue;
+         double? skinportVal = (e['skinport_value'] ?? e['bp_value']) != null ? ((e['skinport_value'] ?? e['bp_value']) as num).toDouble() : null;
          
          if (steamVal != null) pointsSteam.add(FlSpot(time, steamVal));
-         if (bpVal != null) pointsBp.add(FlSpot(time, bpVal));
+         if (skinportVal != null) pointsSkinport.add(FlSpot(time, skinportVal));
       }
     }
 
@@ -55,11 +55,11 @@ class PortfolioChart extends StatelessWidget {
     double minY = double.infinity;
     double maxY = double.negativeInfinity;
     
-    final activePoints = activePriceSource == 'steam' ? pointsSteam : pointsBp;
+    final activePoints = activePriceSource == 'steam' ? pointsSteam : pointsSkinport;
 
     if (showBothPrices) {
        for (var p in pointsSteam) { if(p.y < minY) minY = p.y; if(p.y > maxY) maxY = p.y; }
-       for (var p in pointsBp) { if(p.y < minY) minY = p.y; if(p.y > maxY) maxY = p.y; }
+       for (var p in pointsSkinport) { if(p.y < minY) minY = p.y; if(p.y > maxY) maxY = p.y; }
     } else {
        for (var p in activePoints) { if(p.y < minY) minY = p.y; if(p.y > maxY) maxY = p.y; }
     }
@@ -87,14 +87,14 @@ class PortfolioChart extends StatelessWidget {
       ));
     }
     
-    if ((showBothPrices || activePriceSource == 'bp') && pointsBp.isNotEmpty) {
+    if ((showBothPrices || activePriceSource == 'skinport') && pointsSkinport.isNotEmpty) {
       lineBars.add(LineChartBarData(
-        spots: pointsBp,
+        spots: pointsSkinport,
         isCurved: false,
-        color: Colors.amber[400]!, // Backpack color
+        color: Colors.amber[400]!, // Skinport color
         barWidth: 3,
         isStrokeCapRound: true,
-        dotData: FlDotData(show: pointsBp.length < 2),
+        dotData: FlDotData(show: pointsSkinport.length < 2),
         belowBarData: BarAreaData(show: true, color: Colors.amber[400]!.withAlpha(30)),
       ));
     }

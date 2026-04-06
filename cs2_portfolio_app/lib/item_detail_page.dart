@@ -111,8 +111,8 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    double? activePrice = activePriceSource == 'steam' ? widget.item.steamPrice : widget.item.bpPrice;
-    double? fallbackPrice = widget.item.steamPrice ?? widget.item.bpPrice;
+    double? activePrice = activePriceSource == 'steam' ? widget.item.steamPrice : widget.item.skinportPrice;
+    double? fallbackPrice = widget.item.steamPrice ?? widget.item.skinportPrice;
     double? displayPrice = activePrice ?? fallbackPrice;
 
     double? profitLoss;
@@ -172,6 +172,21 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
               style: const TextStyle(fontSize: 16, color: Colors.grey),
             ),
 
+            if (widget.item.collection != null && widget.item.collection!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white10,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Text(
+                  widget.item.collection!,
+                  style: const TextStyle(fontSize: 14, color: Colors.white70),
+                ),
+              ),
+            ],
+
             const SizedBox(height: 24),
 
             // 🔥 PRICE HISTORY CHART
@@ -226,9 +241,9 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text("Backpack Price:", style: TextStyle(fontSize: 16)),
+                        const Text("Skinport Price:", style: TextStyle(fontSize: 16)),
                         Text(
-                          widget.item.bpPrice != null ? "\$${widget.item.bpPrice!.toStringAsFixed(2)}" : "-",
+                          widget.item.skinportPrice != null ? "\$${widget.item.skinportPrice!.toStringAsFixed(2)}" : "-",
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.amber[400]),
                         ),
                       ],
@@ -237,7 +252,7 @@ class _ItemDetailPageState extends State<ItemDetailPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text("${activePriceSource == 'steam' ? 'Steam' : 'Backpack'} Price:", style: const TextStyle(fontSize: 16)),
+                        Text("${activePriceSource == 'steam' ? 'Steam' : 'Skinport'} Price:", style: const TextStyle(fontSize: 16)),
                         Text(
                           displayPrice != null ? "\$${displayPrice.toStringAsFixed(2)}" : "-",
                           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: activePriceSource == 'steam' ? Colors.lightBlue[300] : Colors.amber[400]),

@@ -1,4 +1,4 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:brotli/brotli.dart';
@@ -12,8 +12,9 @@ class InventoryResult {
   final List<InventoryItem> items;
   final double totalValue;
   final double totalPurchaseValue;
-  final double totalValueForProfitCalc;
+  final double? totalValueForProfitCalc;
   final DateTime? lastPriceRefresh;
+  final DateTime? lastSkinportPriceRefresh;
   final String? error;
 
   InventoryResult({
@@ -22,6 +23,7 @@ class InventoryResult {
     required this.totalPurchaseValue,
     required this.totalValueForProfitCalc,
     this.lastPriceRefresh,
+    this.lastSkinportPriceRefresh,
     this.error,
   });
 }
@@ -74,6 +76,33 @@ class InventoryService {
     // Initialize history structure if empty
     if (!_history.containsKey('total_value')) _history['total_value'] = [];
     if (!_history.containsKey('items')) _history['items'] = {};
+
+    // Clean up history.json from the 0 steam_value bug
+    if (_history["total_value"] != null) {
+      List<dynamic> tv = _history["total_value"];
+      bool fixed = false;
+      for (int i = 0; i < tv.length; i++) {
+        if (tv[i] is Map && tv[i]["steam_value"] == 0 && tv[i]["skinport_value"] != null && tv[i]["skinport_value"] > 0) {
+          double? prevSteam;
+          for (int j = i - 1; j >= 0; j--) {
+             if (tv[j]["steam_value"] != null && tv[j]["steam_value"] > 0) {
+               prevSteam = (tv[j]["steam_value"] as num).toDouble();
+               break;
+             } else if (tv[j]["value"] != null && tv[j]["value"] > 0) {
+               prevSteam = (tv[j]["value"] as num).toDouble();
+               break;
+             }
+          }
+          if (prevSteam != null) {
+             tv[i]["steam_value"] = prevSteam;
+             fixed = true;
+          }
+        }
+      }
+      if (fixed) {
+        _storage.saveData('history.json', _history); // Non-blocking save
+      }
+    }
   }
 
   // Cache for raw inventory items (mimicking server.js inventoryCache)
@@ -97,16 +126,16 @@ class InventoryService {
          // Merge with Local Data
          final priceEntry = _prices[item.name];
          double? steamPrice;
-         double? bpPrice;
+         double? skinportPrice;
          double? steamPreviousPrice;
-         double? bpPreviousPrice;
+         double? skinportPreviousPrice;
          DateTime? lastUpdated;
 
          if (priceEntry != null) {
            steamPrice = (priceEntry["steam_price"] as num?)?.toDouble();
-           bpPrice = (priceEntry["bp_price"] as num?)?.toDouble();
+           skinportPrice = (priceEntry["skinport_price"] as num?)?.toDouble();
            steamPreviousPrice = (priceEntry["steam_previous_price"] as num?)?.toDouble();
-           bpPreviousPrice = (priceEntry["bp_previous_price"] as num?)?.toDouble();
+           skinportPreviousPrice = (priceEntry["skinport_previous_price"] as num?)?.toDouble();
 
            // Legacy fallback for old cache formats
            if (steamPrice == null && priceEntry["price"] != null) {
@@ -138,9 +167,10 @@ class InventoryService {
            marketable: item.marketable,
            steamPrice: steamPrice,
            steamPreviousPrice: steamPreviousPrice,
-           bpPrice: bpPrice,
-           bpPreviousPrice: bpPreviousPrice,
+           skinportPrice: skinportPrice,
+           skinportPreviousPrice: skinportPreviousPrice,
            purchasePrice: purchasePrice,
+           collection: item.collection,
            isWatched: isWatched,
            lastUpdated: lastUpdated,
          );
@@ -161,8 +191,14 @@ class InventoryService {
 
       // Get Last Refresh Time from Meta
       DateTime? lastPriceRefresh;
-      if (_portfolio["_meta"] != null && _portfolio["_meta"]["last_price_refresh"] != null) {
-        lastPriceRefresh = DateTime.fromMillisecondsSinceEpoch(_portfolio["_meta"]["last_price_refresh"]);
+      DateTime? lastSkinportPriceRefresh;
+      if (_portfolio["_meta"] != null) {
+        if (_portfolio["_meta"]["last_price_refresh"] != null) {
+          lastPriceRefresh = DateTime.fromMillisecondsSinceEpoch(_portfolio["_meta"]["last_price_refresh"]);
+        }
+        if (_portfolio["_meta"]["last_skinport_price_refresh"] != null) {
+          lastSkinportPriceRefresh = DateTime.fromMillisecondsSinceEpoch(_portfolio["_meta"]["last_skinport_price_refresh"]);
+        }
       }
 
       // Handle Price Updates (Force Update)
@@ -181,6 +217,7 @@ class InventoryService {
         totalPurchaseValue: totalPurchaseValue,
         totalValueForProfitCalc: totalValueForProfitCalc,
         lastPriceRefresh: lastPriceRefresh,
+        lastSkinportPriceRefresh: lastSkinportPriceRefresh,
       );
 
     } catch (e) {
@@ -210,8 +247,8 @@ class InventoryService {
           final priceEntry = _prices[item.name];
           double? steamPrice = (priceEntry?["steam_price"] as num?)?.toDouble();
           double? steamPrevPrice = (priceEntry?["steam_previous_price"] as num?)?.toDouble();
-          double? bpPrice = (priceEntry?["bp_price"] as num?)?.toDouble();
-          double? bpPrevPrice = (priceEntry?["bp_previous_price"] as num?)?.toDouble();
+          double? skinportPrice = (priceEntry?["skinport_price"] as num?)?.toDouble();
+          double? bpPrevPrice = (priceEntry?["skinport_previous_price"] as num?)?.toDouble();
 
           // Legacy support
           if (steamPrice == null && priceEntry?["price"] != null) {
@@ -219,7 +256,7 @@ class InventoryService {
             steamPrevPrice = (priceEntry?["previous_price"] as num?)?.toDouble();
           }
 
-          double? price = steamPrice ?? bpPrice;
+          double? price = steamPrice ?? skinportPrice;
           // previousPrice is not directly used in the constructor, but the getter will derive it.
 
           final portfolioEntry = _portfolio[item.assetid];
@@ -231,8 +268,9 @@ class InventoryService {
             name: item.name,
             icon: item.icon, type: item.type, marketable: item.marketable,
             steamPrice: steamPrice, steamPreviousPrice: steamPrevPrice,
-            bpPrice: bpPrice, bpPreviousPrice: bpPrevPrice,
+            skinportPrice: skinportPrice, skinportPreviousPrice: bpPrevPrice,
             purchasePrice: purchasePrice,
+            collection: item.collection,
             isWatched: portfolioEntry?["watch"] == true,
           );
           cachedItems.add(newItem);
@@ -385,6 +423,16 @@ class InventoryService {
        final type = desc["type"] ?? "";
        final marketable = desc["marketable"] ?? 0;
 
+       String? collectionName;
+       if (desc["tags"] != null) {
+         for (var tag in desc["tags"]) {
+           if (tag["category"] == "ItemSet") {
+             collectionName = tag["localized_tag_name"]?.toString();
+             break;
+           }
+         }
+       }
+
        items.add(InventoryItem(
          assetid: asset["assetid"],
          classid: asset["classid"],
@@ -394,9 +442,10 @@ class InventoryService {
          marketable: marketable,
          steamPrice: null,
          steamPreviousPrice: null,
-         bpPrice: null,
-         bpPreviousPrice: null,
+         skinportPrice: null,
+         skinportPreviousPrice: null,
          purchasePrice: null,
+         collection: collectionName,
          isWatched: false,
        ));
     }
@@ -419,14 +468,14 @@ class InventoryService {
   /// Update trigger from UI (Steam)
   Future<void> updateAllPrices() async {
     if (_isUpdating) {
-      print("⚠️ Update already in progress.");
+      print("âš ï¸ Update already in progress.");
       return; 
     }
 
     final service = FlutterBackgroundService();
     final cached = await _storage.loadData('inventory.json');
     if (cached['items'] == null) {
-      print("❌ Cannot update: Inventory cache empty.");
+      print("âŒ Cannot update: Inventory cache empty.");
       return;
     }
     
@@ -444,9 +493,9 @@ class InventoryService {
   }
 
   /// Update trigger from UI (CSGO Backpack)
-  Future<void> updateAllPricesFromBP() async {
+  Future<void> updateAllPricesFromSkinport() async {
     if (_isUpdating) {
-      print("⚠️ Update already in progress.");
+      print("âš ï¸ Update already in progress.");
       return; 
     }
 
@@ -462,7 +511,7 @@ class InventoryService {
     }
   }
 
-  // 🔥 Background Price Update Logic (Steam)
+  // ğŸ”¥ Background Price Update Logic (Steam)
   Future<void> _updatePricesInBackground(List<InventoryItem> items, FlutterBackgroundService service) async {
     // Normalize names and filter marketable items
     // We store the ORIGINAL name for storage keys, but use NORMALIZED for matching
@@ -474,9 +523,9 @@ class InventoryService {
     final uniqueNormalizedNames = normalizedToOriginal.keys.toSet();
     int total = uniqueNormalizedNames.length;
 
-    print("🔍 Diagnostic: Total unique items to update: $total");
+    print("ğŸ” Diagnostic: Total unique items to update: $total");
     if (normalizedToOriginal.isNotEmpty) {
-      print("🔍 Diagnostic: Sample items from inventory (normalized): ${uniqueNormalizedNames.take(5).toList()}");
+      print("ğŸ” Diagnostic: Sample items from inventory (normalized): ${uniqueNormalizedNames.take(5).toList()}");
     }
 
     // Update Meta Timestamp (Restore)
@@ -486,7 +535,7 @@ class InventoryService {
 
     service.invoke("updateNotification", {"content": "Starting price update..."});
     
-    // --- 📦 PHASE 1: SMART BATCH UPDATE (Search/Render) ---
+    // --- ğŸ“¦ PHASE 1: SMART BATCH UPDATE (Search/Render) ---
     Set<String> allBatchUpdated = {};
     
     // Extract unique subcategories (keywords) from user's inventory
@@ -510,7 +559,7 @@ class InventoryService {
     // If we have "Others", remove it to avoid junk searches
     searchKeywords.remove("Others");
     
-    print("🚀 Starting Smart Batch Update Phase for ${searchKeywords.length} categories: $searchKeywords");
+    print("ğŸš€ Starting Smart Batch Update Phase for ${searchKeywords.length} categories: $searchKeywords");
     
     int batchIndex = 0;
     for (var keyword in searchKeywords) {
@@ -536,12 +585,12 @@ class InventoryService {
       await Future.delayed(const Duration(seconds: 5));
     }
 
-    // --- 🔍 PHASE 2: INDIVIDUAL UPDATE (Fallback) ---
+    // --- ğŸ” PHASE 2: INDIVIDUAL UPDATE (Fallback) ---
     final remainingNormalized = uniqueNormalizedNames.where((norm) => !allBatchUpdated.contains(norm)).toList();
     int remainingTotal = remainingNormalized.length;
     int current = 0;
     
-    print("🔍 Batch Phase Result: Found ${uniqueNormalizedNames.length - remainingTotal} items. $remainingTotal remaining.");
+    print("ğŸ” Batch Phase Result: Found ${uniqueNormalizedNames.length - remainingTotal} items. $remainingTotal remaining.");
 
     if (remainingTotal > 0) {
       int consecutiveErrors = 0;
@@ -570,7 +619,7 @@ class InventoryService {
           consecutiveErrors++;
           if (consecutiveErrors >= 2) { 
             delayMs = 25000; // 25s
-            print("⚠️ Frequent errors, slowing down to ${delayMs}ms");
+            print("âš ï¸ Frequent errors, slowing down to ${delayMs}ms");
             _progressController.add("Steam is busy. Cooling down for 25s... ($current/$remainingTotal)");
             service.invoke("updateNotification", {"content": "Rate limited, waiting... $progressMsg"});
           } else {
@@ -605,7 +654,7 @@ class InventoryService {
         final res = await http.get(url, headers: batchHeaders);
 
         if (res.statusCode == 200) {
-          // FORCE UTF-8 Decoding for special characters (™, ★, etc.)
+          // FORCE UTF-8 Decoding for special characters (â„¢, â˜…, etc.)
           final bodyString = utf8.decode(res.bodyBytes);
           final body = json.decode(bodyString);
           
@@ -622,7 +671,7 @@ class InventoryService {
               String? priceStr = result["sell_price_text"];
               
               if (retryAttempt == 0 && updatedNames.isEmpty && rawHashName.isNotEmpty) {
-                 print("🔍 Diagnostic: First item in Batch (normalized): '$normName' Price: '$priceStr'");
+                 print("ğŸ” Diagnostic: First item in Batch (normalized): '$normName' Price: '$priceStr'");
               }
 
               if (rawHashName.isNotEmpty && priceStr != null) {
@@ -657,26 +706,26 @@ class InventoryService {
             if (updatedNames.isNotEmpty) {
               await _storage.saveData('prices.json', _prices);
               await _storage.saveData('history.json', _history);
-              print("📦 Batch update: Updated ${updatedNames.length} items (start=$start).");
+              print("ğŸ“¦ Batch update: Updated ${updatedNames.length} items (start=$start).");
             }
             return updatedNames;
           }
         } else if (res.statusCode == 429) {
           retryAttempt++;
-          print("🚫 Batch Rate Limit (429) at start=$start. Waiting 30s...");
+          print("ğŸš« Batch Rate Limit (429) at start=$start. Waiting 30s...");
           _progressController.add("Steam limit reached. Cooling down (30s)...");
           await Future.delayed(const Duration(seconds: 30));
           if (retryAttempt >= 2) break;
         } else if (res.statusCode == 503 || res.statusCode == 500) {
-          print("❌ Steam Server Error (${res.statusCode}) at start=$start");
+          print("âŒ Steam Server Error (${res.statusCode}) at start=$start");
           _progressController.add("Steam Market is down (${res.statusCode})");
           break;
         } else {
-          print("❌ Batch update failed (HTTP ${res.statusCode})");
+          print("âŒ Batch update failed (HTTP ${res.statusCode})");
           break;
         }
       } catch (e) {
-        print("❌ Error in batch update: $e");
+        print("âŒ Error in batch update: $e");
         break;
       }
     }
@@ -733,52 +782,52 @@ class InventoryService {
               
               if (saveToDisk) await _storage.saveData('history.json', _history);
               
-              print("✅ Updated price for $marketHashName: \$$price");
+              print("âœ… Updated price for $marketHashName: \$$price");
               return true;
             }
           }
           // success == false or price == null
-          print("⚠️ No valid price for $marketHashName");
+          print("âš ï¸ No valid price for $marketHashName");
           return false;
 
         } else if (res.statusCode == 429) {
-          // Rate limited — retry with exponential backoff
+          // Rate limited â€” retry with exponential backoff
           retryAttempt++;
           int waitSeconds = retryAttempt * 10; // 10s, 20s, 30s
-          print("🚫 Rate limit (429) for $marketHashName. Retry $retryAttempt/$maxRetries in ${waitSeconds}s");
+          print("ğŸš« Rate limit (429) for $marketHashName. Retry $retryAttempt/$maxRetries in ${waitSeconds}s");
           if (retryAttempt < maxRetries) {
             await Future.delayed(Duration(seconds: waitSeconds));
           }
         } else {
           // Other HTTP errors (404, 500, etc.)
-          print("❌ HTTP ${res.statusCode} for $marketHashName");
+          print("âŒ HTTP ${res.statusCode} for $marketHashName");
           return false;
         }
       } catch (e) {
         retryAttempt++;
-        print("❌ Error fetching price for $marketHashName (attempt $retryAttempt): $e");
+        print("âŒ Error fetching price for $marketHashName (attempt $retryAttempt): $e");
         if (retryAttempt < maxRetries) {
           await Future.delayed(Duration(seconds: retryAttempt * 5));
         }
       }
     }
 
-    print("❌ Failed completely to fetch price for $marketHashName after $maxRetries attempts");
+    print("âŒ Failed completely to fetch price for $marketHashName after $maxRetries attempts");
     return false;
   }
 
   // ===========================================================================
-  // 🎒 PHASE 2.5: CSGO BACKPACK INTEGRATION (INSTANT)
+  // ğŸ’ PHASE 2.5: CSGO BACKPACK INTEGRATION (INSTANT)
   // ===========================================================================
 
   Future<void> _updatePricesFromBPInBackground(FlutterBackgroundService service) async {
     try {
-      print("🎒 Initializing CSGO Backpack Price Update...");
+      print("ğŸ’ Initializing CSGO Backpack Price Update...");
       
       // 1. Fetch Inventory & Prepare
       final cached = await _storage.loadData('inventory.json');
       if (cached['items'] == null) {
-        print("❌ Inventory cache not found.");
+        print("âŒ Inventory cache not found.");
         service.invoke("updateNotification", {"content": "Inventory not loaded"});
         service.invoke("stopService");
         return;
@@ -796,10 +845,10 @@ class InventoryService {
       }
       
       int totalItems = normalizedToOriginal.length;
-      print("🔍 Total unique active items to update: $totalItems");
+      print("ğŸ” Total unique active items to update: $totalItems");
 
       // 2. Fetch Bulk API (Skinport)
-      print("🌍 Fetching 20,000+ items from Skinport...");
+      print("ğŸŒ Fetching 20,000+ items from Skinport...");
       service.invoke("updateNotification", {"content": "Fetching Backpack API..."});
 
       final res = await http.get(
@@ -810,25 +859,25 @@ class InventoryService {
       );
 
       if (res.statusCode != 200) {
-        print("❌ HTTP Error ${res.statusCode} from Skinport API");
+        print("âŒ HTTP Error ${res.statusCode} from Skinport API");
         service.invoke("updateNotification", {"content": "API Error: ${res.statusCode}"});
         service.invoke("stopService");
         return;
       }
 
-      print("✅ Skinport API response received. Decoding Brotli and Parsing JSON...");
+      print("âœ… Skinport API response received. Decoding Brotli and Parsing JSON...");
       
       final decodedBytes = brotli.decode(res.bodyBytes);
       final jsonString = utf8.decode(decodedBytes);
       final List<dynamic> itemsList = json.decode(jsonString);
 
       if (itemsList.isEmpty) {
-        print("❌ Skinport API returned empty list.");
+        print("âŒ Skinport API returned empty list.");
         service.invoke("stopService");
         return;
       }
 
-      print("📦 Successfully parsed ${itemsList.length} global items.");
+      print("ğŸ“¦ Successfully parsed ${itemsList.length} global items.");
 
       // 3. Match & Update Prices
       int matches = 0;
@@ -850,21 +899,21 @@ class InventoryService {
                newBpPrice = (bpData["suggested_price"] as num).toDouble();
              }
            } catch (e) {
-             print("⚠️ Error parsing price for $bpName: $e");
+             print("âš ï¸ Error parsing price for $bpName: $e");
            }
 
            if (newBpPrice != null && newBpPrice > 0) {
               matches++;
               
               final oldPriceEntry = _prices[originalName] ?? {};
-              double? previousBpPrice = oldPriceEntry["bp_price"] != null
-                  ? (oldPriceEntry["bp_price"] as num?)?.toDouble()
+              double? previousBpPrice = oldPriceEntry["skinport_price"] != null
+                  ? (oldPriceEntry["skinport_price"] as num?)?.toDouble()
                   : null;
 
               _prices[originalName] = {
                 ...oldPriceEntry, // Preserve steam_price
-                "bp_price": newBpPrice,
-                "bp_previous_price": previousBpPrice,
+                "skinport_price": newBpPrice,
+                "skinport_previous_price": previousBpPrice,
                 "time": DateTime.now().millisecondsSinceEpoch
               };
               
@@ -873,7 +922,7 @@ class InventoryService {
               }
               (historyItems[originalName] as List).add({
                 "time": DateTime.now().millisecondsSinceEpoch,
-                "bp_price": newBpPrice
+                "skinport_price": newBpPrice
               });
            }
         }
@@ -881,23 +930,23 @@ class InventoryService {
 
       _history["items"] = historyItems;
       
-      print("💾 Saving matching Backpack prices to disk ($matches/$totalItems matched)...");
+      print("ğŸ’¾ Saving matching Backpack prices to disk ($matches/$totalItems matched)...");
       await _storage.saveData('prices.json', _prices);
       await _storage.saveData('history.json', _history);
 
       // Update Portfolio Meta
       if (_portfolio["_meta"] == null) _portfolio["_meta"] = {};
-      _portfolio["_meta"]["last_bp_price_refresh"] = DateTime.now().millisecondsSinceEpoch;
+      _portfolio["_meta"]["last_skinport_price_refresh"] = DateTime.now().millisecondsSinceEpoch;
       await _storage.saveData('portfolio.json', _portfolio);
 
       // Record total history
       await _recordTotalValueHistory(items);
 
-      print("🎉 Backpack Update Complete in 1 API request!");
+      print("ğŸ‰ Backpack Update Complete in 1 API request!");
       service.invoke("updateNotification", {"content": "Backpack Update Complete!"});
 
     } catch (e) {
-      print("❌ Fatal error in Backpack Update: $e");
+      print("âŒ Fatal error in Backpack Update: $e");
       service.invoke("updateNotification", {"content": "Error: $e"});
     } finally {
       await Future.delayed(const Duration(seconds: 4));
@@ -917,8 +966,8 @@ class InventoryService {
     for (var item in items) {
       final priceEntry = _prices[item.name];
       if (priceEntry != null) {
-        double? steam = (priceEntry["steam_price"] as num?)?.toDouble();
-        double? bp = (priceEntry["bp_price"] as num?)?.toDouble();
+        double? steam = (priceEntry["steam_price"] as num?)?.toDouble() ?? (priceEntry["price"] as num?)?.toDouble();
+        double? bp = (priceEntry["skinport_price"] as num?)?.toDouble();
         if (steam != null) totalSteam += steam;
         if (bp != null) totalBp += bp;
       }
@@ -929,7 +978,7 @@ class InventoryService {
       (_history["total_value"] as List).add({
         "time": DateTime.now().millisecondsSinceEpoch,
         "steam_value": totalSteam,
-        "bp_value": totalBp
+        "skinport_value": totalBp
       });
       await _storage.saveData('history.json', _history);
     }
@@ -984,11 +1033,11 @@ class InventoryService {
     return List<Map<String, dynamic>>.from(_history["items"]?[marketName] ?? []);
   }
 
-  /// Returns a map of {itemName: price} for the price closest to [targetTime] for all items.
+  /// Returns a map of {itemName: {'steam': price, 'skinport': price}} for the price closest to [targetTime] for all items.
   /// Used by the market page time range filter (1 day, 1 week, 1 month).
-  Future<Map<String, double?>> getPricesAtTimeForAll(DateTime targetTime) async {
+  Future<Map<String, Map<String, double?>>> getPricesAtTimeForAll(DateTime targetTime) async {
     await _loadLocalData();
-    final Map<String, double?> result = {};
+    final Map<String, Map<String, double?>> result = {};
     final int targetMs = targetTime.millisecondsSinceEpoch;
 
     final items = _history["items"] as Map<String, dynamic>? ?? {};
@@ -997,33 +1046,51 @@ class InventoryService {
       final List<dynamic> historyList = entry.value as List<dynamic>? ?? [];
 
       if (historyList.isEmpty) {
-        result[itemName] = null;
+        result[itemName] = {'steam': null, 'skinport': null};
         continue;
       }
 
       // Find the entry closest to targetTime (but not after it)
-      Map<String, dynamic>? best;
-      int bestDiff = 999999999999;
+      double? bestSteam;
+      double? bestBp;
 
-      for (var h in historyList) {
+      // Ensure chronological search by going backwards from targetMs
+      for (int i = historyList.length - 1; i >= 0; i--) {
+        final h = historyList[i];
         final int t = h["time"] as int;
         if (t <= targetMs) {
-          final diff = targetMs - t;
-          if (diff < bestDiff) {
-            bestDiff = diff;
-            best = h as Map<String, dynamic>;
+          if (bestSteam == null) {
+            double? steamPrice = (h["steam_price"] as num?)?.toDouble() ?? (h["price"] as num?)?.toDouble();
+            if (steamPrice != null) bestSteam = steamPrice;
           }
+          if (bestBp == null) {
+            double? skinportPrice = (h["skinport_price"] as num?)?.toDouble();
+            if (skinportPrice != null) bestBp = skinportPrice;
+          }
+          if (bestSteam != null && bestBp != null) break;
         }
       }
 
-      // If no entry before target, take the earliest available
-      if (best == null && historyList.isNotEmpty) {
-        best = historyList.first as Map<String, dynamic>;
+      // If no valid past entry, fallback to the first available historically
+      if (bestSteam == null || bestBp == null) {
+        for (var h in historyList) {
+          if (bestSteam == null) {
+            double? steamPrice = (h["steam_price"] as num?)?.toDouble() ?? (h["price"] as num?)?.toDouble();
+            if (steamPrice != null) bestSteam = steamPrice;
+          }
+          if (bestBp == null) {
+            double? skinportPrice = (h["skinport_price"] as num?)?.toDouble();
+            if (skinportPrice != null) bestBp = skinportPrice;
+          }
+          if (bestSteam != null && bestBp != null) break;
+        }
       }
 
-      result[itemName] = best != null ? (best["price"] as num?)?.toDouble() : null;
+      result[itemName] = {'steam': bestSteam, 'skinport': bestBp};
     }
 
     return result;
   }
 }
+
+
